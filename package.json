@@ -1,0 +1,103 @@
+{
+  "name": "devworkbench",
+  "version": "1.0.0",
+  "description": "DevWorkbench - 一站式开发者工作台，融合知识库管理与开发工具箱",
+  "author": "DevWorkbench Contributors",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/devworkbench.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "electron:dev": "tsc -p tsconfig.preload.json && tsc -p tsconfig.electron.json && NODE_ENV=development electron dist-electron/main.js --no-sandbox",
+    "electron:start": "concurrently -k \"npm run dev\" \"sleep 2 && npm run electron:dev\"",
+    "build": "tsc -b && vite build",
+    "electron:build": "npm run build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && electron-builder",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "axios": "^1.6.0",
+    "cors": "^2.8.6",
+    "crypto-js": "^4.2.0",
+    "d3": "^7.9.0",
+    "dev-assistant-ts": "file:../dev-assistant-ts",
+    "docx": "^9.6.1",
+    "express": "^5.2.1",
+    "html2pdf.js": "^0.14.0",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^1.14.0",
+    "marked": "^18.0.3",
+    "monaco-editor": "^0.44.0",
+    "node-ssh": "^13.2.1",
+    "qrcode": "^1.5.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "uuid": "^14.0.0",
+    "ws": "^8.21.0",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/crypto-js": "^4.2.2",
+    "@types/d3": "^7.4.3",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.12.2",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.10"
+  },
+  "build": {
+    "appId": "com.devworkbench.app",
+    "productName": "DevWorkbench",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "asar": false,
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "zip",
+        "dmg"
+      ],
+      "icon": "icons/devworkbench.icns"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icons/devworkbench.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}

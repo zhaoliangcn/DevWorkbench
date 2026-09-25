@@ -1,0 +1,1704 @@
+/* 工具箱工作区样式 —— 来自 dev-tool-box（Sidebar.css / ToolCommon.css / ModuleCommon.css）
+   全部选择器作用域化在 .tb-root 下；旧 CSS 变量映射到全局 --color-* 体系。 */
+
+/* ---------- 旧变量映射 ---------- */
+.tb-root {
+  --bg-primary: var(--color-bg);
+  --bg-secondary: var(--color-surface);
+  --bg-tertiary: #eef0f5;
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --border-color: var(--color-border);
+  --accent-color: var(--color-primary);
+  --accent-hover: var(--color-primary-hover);
+  --success-color: var(--color-success);
+  --error-color: var(--color-danger);
+  --warning-color: var(--color-warning);
+}
+
+[data-theme='dark'] .tb-root {
+  --bg-tertiary: #2b2b32;
+}
+
+/* ---------- 基础表单 / 按钮（来自原 global.css） ---------- */
+.tb-root input,
+.tb-root textarea,
+.tb-root select {
+  font-family: inherit;
+  font-size: inherit;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.tb-root input:focus,
+.tb-root textarea:focus,
+.tb-root select:focus {
+  border-color: var(--accent-color);
+}
+
+.tb-root input[type='checkbox'],
+.tb-root input[type='range'] {
+  padding: 0;
+  accent-color: var(--accent-color);
+}
+
+.tb-root input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+}
+
+.tb-root button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.tb-root button:hover {
+  background-color: var(--accent-hover);
+}
+
+.tb-root button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- 布局 ---------- */
+.tb-root {
+  height: 100%;
+}
+
+.tb-layout {
+  display: flex;
+  height: 100%;
+}
+
+.tb-root .module-content {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ---------- 侧边栏 ---------- */
+.tb-root .sidebar {
+  width: 220px;
+  height: 100%;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.tb-root .sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .sidebar-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.tb-root .sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.tb-root .nav-section {
+  margin-bottom: 8px;
+}
+
+.tb-root .nav-section-title {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.tb-root .nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.tb-root .nav-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.tb-root .nav-item.active {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.tb-root .nav-icon {
+  width: 20px;
+  margin-right: 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.tb-root .nav-label {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 通用工具布局 ---------- */
+.tb-root .tool-container,
+.tb-root .module-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tb-root .tool-header,
+.tb-root .module-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tb-root .tool-header h3,
+.tb-root .module-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tb-root .tool-actions,
+.tb-root .module-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tb-root .tool-body,
+.tb-root .module-body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.tb-root .tool-section {
+  margin-bottom: 16px;
+}
+
+.tb-root .tool-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text-secondary);
+}
+
+.tb-root .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* ---------- 按钮 ---------- */
+.tb-root .btn-secondary {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.tb-root .btn-secondary:hover {
+  background-color: var(--border-color);
+}
+
+.tb-root .btn-danger {
+  background-color: var(--error-color);
+}
+
+.tb-root .btn-danger:hover {
+  opacity: 0.9;
+}
+
+/* ---------- 输入组 / 表单 ---------- */
+.tb-root .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tb-root .input-group label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .input-group input,
+.tb-root .input-group textarea {
+  width: 100%;
+}
+
+.tb-root .regex-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-root .regex-input-row input {
+  flex: 1;
+}
+
+.tb-root .regex-input-row .regex-slash {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.tb-root .form-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.tb-root .form-panel h4 {
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+.tb-root .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tb-root .form-row label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .form-row input,
+.tb-root .form-row select,
+.tb-root .form-row textarea {
+  width: 100%;
+}
+
+.tb-root .form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tb-root .empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.tb-root .empty-state p {
+  font-size: 14px;
+}
+
+/* ---------- 编辑面板 ---------- */
+.tb-root .editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .editor-panel label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .editor-panel textarea {
+  flex: 1;
+  min-height: 200px;
+  resize: vertical;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tb-root .result-display {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.tb-root .result-display textarea {
+  flex: 1;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .error-message {
+  background-color: rgba(244, 71, 71, 0.1);
+  border: 1px solid var(--error-color);
+  color: var(--error-color);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 8px 16px;
+  font-size: 13px;
+}
+
+/* ---------- 选择器组 ---------- */
+.tb-root .mode-selector,
+.tb-root .algo-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tb-root .mode-selector button,
+.tb-root .algo-selector button {
+  padding: 6px 12px;
+  font-size: 13px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.tb-root .mode-selector button.active,
+.tb-root .algo-selector button.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+/* ---------- 时间戳工具 ---------- */
+.tb-root .current-time {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+}
+
+/* ---------- 正则工具 ---------- */
+.tb-root .matches-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tb-root .match-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .match-index {
+  color: var(--accent-color);
+  min-width: 30px;
+}
+
+.tb-root .match-text {
+  color: var(--success-color);
+}
+
+.tb-root .template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tb-root .template-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tb-root .template-item:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .template-item.active {
+  background-color: rgba(0, 122, 204, 0.1);
+  border-color: var(--accent-color);
+}
+
+.tb-root .template-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tb-root .template-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .template-pattern {
+  font-size: 11px;
+  color: var(--success-color);
+  word-break: break-all;
+}
+
+.tb-root .match-position {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .match-groups {
+  font-size: 12px;
+  color: var(--warning-color);
+}
+
+/* ---------- 二维码工具 ---------- */
+.tb-root .qr-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.tb-root .qr-preview img {
+  max-width: 256px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+/* ---------- Diff 工具 ---------- */
+.tb-root .diff-result {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-tertiary);
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .diff-line {
+  padding: 2px 8px;
+  white-space: pre;
+}
+
+.tb-root .diff-line.added {
+  background-color: rgba(78, 201, 176, 0.1);
+  color: var(--success-color);
+}
+
+.tb-root .diff-line.removed {
+  background-color: rgba(244, 71, 71, 0.1);
+  color: var(--error-color);
+}
+
+.tb-root .diff-marker {
+  min-width: 20px;
+  font-weight: 600;
+}
+
+/* ---------- 密码工具 ---------- */
+.tb-root .password-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .password-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .password-item code {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+}
+
+/* ---------- URL 栏 / 连接状态 ---------- */
+.tb-root .url-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tb-root .url-bar input {
+  flex: 1;
+}
+
+.tb-root .url-bar select {
+  width: 100px;
+}
+
+.tb-root .connection-status {
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.tb-root .connection-status.connected {
+  background-color: rgba(78, 201, 176, 0.2);
+  color: var(--success-color);
+}
+
+.tb-root .connection-status.disconnected {
+  color: var(--text-secondary);
+}
+
+/* ---------- WebSocket 工具 ---------- */
+.tb-root .ws-messages {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  background-color: var(--bg-tertiary);
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .ws-message {
+  padding: 4px 8px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.tb-root .ws-message.sent {
+  color: var(--accent-color);
+}
+
+.tb-root .ws-message.received {
+  color: var(--success-color);
+}
+
+.tb-root .ws-message.system {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.tb-root .msg-time {
+  color: var(--text-secondary);
+  min-width: 60px;
+  font-size: 11px;
+}
+
+.tb-root .msg-type {
+  min-width: 16px;
+}
+
+.tb-root .msg-content {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ---------- Mock 服务工具 ---------- */
+.tb-root .server-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.tb-root .status-indicator {
+  font-size: 14px;
+}
+
+.tb-root .status-indicator.running {
+  color: var(--success-color);
+}
+
+.tb-root .status-indicator.stopped {
+  color: var(--text-secondary);
+}
+
+.tb-root .rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .rule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .rule-item.disabled {
+  opacity: 0.6;
+}
+
+.tb-root .rule-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-root .method-tag {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tb-root .method-tag.GET { background-color: rgba(78, 201, 176, 0.2); color: var(--success-color); }
+.tb-root .method-tag.POST { background-color: rgba(0, 122, 204, 0.2); color: var(--accent-color); }
+.tb-root .method-tag.PUT { background-color: rgba(204, 167, 0, 0.2); color: var(--warning-color); }
+.tb-root .method-tag.DELETE { background-color: rgba(244, 71, 71, 0.2); color: var(--error-color); }
+.tb-root .method-tag.PATCH { background-color: rgba(180, 120, 200, 0.2); color: #b478c8; }
+
+.tb-root .rule-path {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .status-code {
+  padding: 2px 6px;
+  background-color: var(--bg-tertiary);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.tb-root .delay-tag {
+  padding: 2px 6px;
+  background-color: var(--warning-color);
+  color: black;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.tb-root .rule-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- HTTP 模块 ---------- */
+.tb-root .http-request {
+  margin-bottom: 16px;
+}
+
+.tb-root .tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tb-root .section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.tb-root .header-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tb-root .header-row input {
+  flex: 1;
+}
+
+.tb-root .header-row .btn-danger {
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tb-root .http-response {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.tb-root .response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .response-header h4 {
+  margin: 0;
+}
+
+.tb-root .response-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tb-root .response-meta .status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tb-root .response-meta .status.success {
+  background-color: rgba(78, 201, 176, 0.2);
+  color: var(--success-color);
+}
+
+.tb-root .response-meta .status.error {
+  background-color: rgba(244, 71, 71, 0.2);
+  color: var(--error-color);
+}
+
+.tb-root .http-response textarea {
+  width: 100%;
+  min-height: 200px;
+  border: none;
+  resize: vertical;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .history-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.tb-root .history-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .history-item {
+  cursor: pointer;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .history-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.tb-root .history-item .method {
+  font-weight: 600;
+  min-width: 60px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.tb-root .history-item .method.GET {
+  background-color: rgba(78, 201, 176, 0.2);
+  color: var(--success-color);
+}
+
+.tb-root .history-item .method.POST {
+  background-color: rgba(0, 122, 204, 0.2);
+  color: var(--accent-color);
+}
+
+.tb-root .history-item .method.PUT {
+  background-color: rgba(204, 167, 0, 0.2);
+  color: var(--warning-color);
+}
+
+.tb-root .history-item .method.DELETE {
+  background-color: rgba(244, 71, 71, 0.2);
+  color: var(--error-color);
+}
+
+.tb-root .history-item .method.PATCH {
+  background-color: rgba(180, 120, 200, 0.2);
+  color: #b478c8;
+}
+
+.tb-root .history-item .url {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .history-item .status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ---------- SSH 模块 ---------- */
+.tb-root .server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .server-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .server-item:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .server-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tb-root .server-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tb-root .server-host,
+.tb-root .server-user {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .server-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-root .terminal-container {
+  margin-top: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tb-root .terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .terminal-header span {
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.tb-root .terminal-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tb-root .connecting-indicator {
+  font-size: 12px;
+  color: var(--warning-color);
+}
+
+.tb-root .connection-error {
+  padding: 12px 16px;
+  background-color: rgba(244, 71, 71, 0.1);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .connection-error p {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--error-color);
+}
+
+.tb-root .terminal-window {
+  height: 400px;
+  background-color: #1e1e1e;
+  padding: 12px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  color: #cccccc;
+}
+
+/* ---------- Phase 4 待迁移占位 ---------- */
+.tb-root .module-pending {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.tb-root .module-pending-icon {
+  font-size: 40px;
+}
+
+.tb-root .module-pending h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.tb-root .module-pending p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ---------- IP 工具 ---------- */
+.tb-root .scan-range-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-root .scan-range-row input {
+  flex: 1;
+}
+
+.tb-root .scan-result {
+  margin-top: 12px;
+}
+
+/* ---------- 数据库工具 ---------- */
+.tb-root .connections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .connection-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .connection-item.active {
+  border-color: var(--accent-color);
+  background-color: rgba(0, 122, 204, 0.1);
+}
+
+.tb-root .connection-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-root .conn-type {
+  padding: 2px 6px;
+  background-color: var(--accent-color);
+  color: white;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tb-root .conn-name {
+  font-weight: 600;
+}
+
+.tb-root .conn-host {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .connection-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-root .sql-editor {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  width: 100%;
+}
+
+/* ---------- 文本处理 / 格式互转 ---------- */
+.tb-root .format-select-row {
+  display: flex;
+  gap: 12px;
+}
+
+.tb-root .format-select-row .form-row {
+  flex: 1;
+}
+
+.tb-root .inline-check-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* ---------- 文件哈希 ---------- */
+.tb-root .file-info {
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.tb-root .file-info p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.tb-root .hash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .hash-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .hash-algo {
+  min-width: 80px;
+  font-weight: 600;
+}
+
+.tb-root .hash-value {
+  flex: 1;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+/* ---------- 计算器 ---------- */
+.tb-root .mode-btn.active {
+  background-color: var(--accent-hover);
+  color: white;
+}
+
+.tb-root .calc-input {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 16px;
+  padding: 12px;
+}
+
+.tb-root .calc-input-full {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.tb-root .operator-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tb-root .operator-list button {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+/* ---------- 日志查看 ---------- */
+.tb-root .auto-scroll-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.tb-root .log-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tb-root .log-filters .form-row {
+  flex: 1;
+}
+
+.tb-root .log-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tb-root .log-container {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: #1e1e1e;
+  color: #cccccc;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tb-root .log-line {
+  display: flex;
+  padding: 1px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tb-root .log-line:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.tb-root .log-line-num {
+  color: #858585;
+  min-width: 50px;
+  text-align: right;
+  padding-right: 12px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.tb-root .log-line-content {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.tb-root .log-error {
+  background-color: rgba(244, 71, 71, 0.1);
+  color: #f44747;
+}
+
+.tb-root .log-warn {
+  background-color: rgba(204, 167, 0, 0.1);
+  color: #cca700;
+}
+
+.tb-root .log-info {
+  color: #cccccc;
+}
+
+.tb-root .log-debug {
+  color: #858585;
+}
+
+.tb-root .log-loading,
+.tb-root .log-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ---------- 图片工具 ---------- */
+.tb-root .image-preview {
+  max-width: 100%;
+  max-height: 300px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin: 12px 0;
+}
+
+.tb-root .base64-output {
+  width: 100%;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  word-break: break-all;
+  margin-top: 8px;
+}
+
+.tb-root .hidden-canvas {
+  display: none;
+}
+
+/* ---------- 镜像地址 ---------- */
+.tb-root .mirror-category-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.tb-root .mirror-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.tb-root .mirror-category-btn:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .mirror-category-btn.active {
+  background-color: rgba(0, 122, 204, 0.15);
+  border-color: var(--accent-color);
+}
+
+.tb-root .category-icon {
+  font-size: 18px;
+}
+
+.tb-root .mirror-config-info {
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.tb-root .mirror-config-info p {
+  margin: 4px 0;
+}
+
+.tb-root .mirror-config-info code {
+  background-color: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.tb-root .mirror-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tb-root .mirror-item {
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .mirror-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tb-root .mirror-status {
+  font-size: 14px;
+}
+
+.tb-root .mirror-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tb-root .mirror-status-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.tb-root .mirror-url {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tb-root .mirror-url code {
+  flex: 1;
+  background-color: var(--bg-primary);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.tb-root .mirror-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.tb-root .copy-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+/* ---------- 代码片段 ---------- */
+.tb-root .snippets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tb-root .snippet-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .snippet-item:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .snippet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  gap: 4px;
+}
+
+.tb-root .snippet-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tb-root .snippet-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-root .lang-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: var(--accent-color);
+  color: white;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.tb-root .snippet-content {
+  background-color: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: 4px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 8px 0 0 0;
+}
+
+.tb-root .snippet-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.tb-root .tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .search-input {
+  width: 200px;
+}
+
+.tb-root .code-textarea {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+/* ---------- 随手记 ---------- */
+.tb-root .notes-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .category-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tb-root .category-tab {
+  padding: 6px 14px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tb-root .category-tab:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.tb-root .category-tab.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+.tb-root .notes-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tb-root .note-item {
+  padding: 14px;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.tb-root .note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.tb-root .note-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.tb-root .pin-icon {
+  font-size: 14px;
+}
+
+.tb-root .note-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.tb-root .note-category {
+  font-size: 11px;
+  padding: 2px 8px;
+  background-color: var(--bg-primary);
+  border-radius: 10px;
+  color: var(--text-secondary);
+}
+
+.tb-root .note-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tb-root .btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  opacity: 0.6;
+}
+
+.tb-root .btn-icon:hover {
+  opacity: 1;
+  background-color: var(--bg-primary);
+}
+
+.tb-root .btn-danger-icon:hover {
+  background-color: rgba(244, 71, 71, 0.1);
+}
+
+.tb-root .note-content {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.tb-root .note-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tb-root .note-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tb-root .note-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tb-root .color-picker {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-root .color-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  padding: 0;
+}
+
+.tb-root .color-option:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .color-option.active {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* ---------- 系统检测 ---------- */
+.tb-root .env-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tb-root .env-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.tb-root .env-item.installed {
+  background-color: rgba(78, 201, 176, 0.1);
+  border: 1px solid rgba(78, 201, 176, 0.3);
+}
+
+.tb-root .env-item.not-installed {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.tb-root .env-name {
+  font-weight: 600;
+}
+
+.tb-root .env-status {
+  font-size: 12px;
+}
+
+.tb-root .env-item.installed .env-status {
+  color: var(--success-color);
+}
+
+.tb-root .env-item.not-installed .env-status {
+  color: var(--text-secondary);
+}
+
+.tb-root .port-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tb-root .port-input-row input {
+  width: 200px;
+}
+
+.tb-root .port-result {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .port-result p {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+}
+
+.tb-root .port-result.success {
+  border-color: var(--success-color);
+  background-color: rgba(78, 201, 176, 0.1);
+}
+
+.tb-root .port-result button {
+  margin-top: 8px;
+}
