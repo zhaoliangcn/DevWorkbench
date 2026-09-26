@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { jsonTransform } from './pure/json'
 
 export function JsonTool() {
   const [input, setInput] = useState('')
@@ -6,25 +7,15 @@ export function JsonTool() {
   const [error, setError] = useState('')
 
   const formatJson = () => {
-    try {
-      const parsed = JSON.parse(input)
-      setOutput(JSON.stringify(parsed, null, 2))
-      setError('')
-    } catch (e) {
-      setError(`JSON 格式错误: ${(e as Error).message}`)
-      setOutput('')
-    }
+    const r = jsonTransform({ text: input, action: 'format' })
+    setOutput(r.error ? '' : r.result)
+    setError(r.error ?? '')
   }
 
   const minifyJson = () => {
-    try {
-      const parsed = JSON.parse(input)
-      setOutput(JSON.stringify(parsed))
-      setError('')
-    } catch (e) {
-      setError(`JSON 格式错误: ${(e as Error).message}`)
-      setOutput('')
-    }
+    const r = jsonTransform({ text: input, action: 'minify' })
+    setOutput(r.error ? '' : r.result)
+    setError(r.error ?? '')
   }
 
   const clear = () => {

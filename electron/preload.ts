@@ -74,6 +74,13 @@ const api = {
       }>
       schedulerEnabled?: boolean
       approvalEnabled?: boolean
+      /** 注入的工具箱工具名（缺省注册全部 toolbox_*） */
+      extraToolNames?: string[]
+      /** 三段式权限清单（切片 E）：needsApproval 强制审批，disabled 不注册 */
+      policy?: {
+        needsApproval?: string[]
+        disabled?: string[]
+      }
       port?: number
     }) => ipcRenderer.invoke('assistant:start', options),
     stop: () => ipcRenderer.invoke('assistant:stop'),
@@ -82,6 +89,18 @@ const api = {
     setModels: (models: unknown[]) => ipcRenderer.invoke('assistant:setModels', models),
     switchModel: (name: string) => ipcRenderer.invoke('assistant:switchModel', name),
     providers: () => ipcRenderer.invoke('assistant:providers'),
+    /** 审批墙：运行时切换审批模式（切片 D） */
+    setApprovalMode: (enabled: boolean) => ipcRenderer.invoke('assistant:setApprovalMode', enabled),
+    /** 审批墙：对一次审批请求回应批准/拒绝（切片 D） */
+    approvalResponse: (id: string, approved: boolean) =>
+      ipcRenderer.invoke('assistant:approvalResponse', id, approved),
+    // 会话历史（切片 F）
+    historyList: () => ipcRenderer.invoke('assistant:history:list'),
+    historyRead: (file: string) => ipcRenderer.invoke('assistant:history:read', file),
+    historyDelete: (file: string) => ipcRenderer.invoke('assistant:history:delete', file),
+    // 技能预设进阶（切片 H.2）
+    toolsList: () => ipcRenderer.invoke('assistant:tools:list'),
+    setToolFilter: (names: string[] | null) => ipcRenderer.invoke('assistant:setToolFilter', names),
     onEvent: (callback: (e: unknown) => void) => {
       const listener = (_event: unknown, e: unknown) => callback(e)
       ipcRenderer.on('assistant:events', listener)

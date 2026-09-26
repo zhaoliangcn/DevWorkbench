@@ -16,6 +16,30 @@ export interface AssistantChatMessage {
   toolName?: string
 }
 
+/**
+ * 三段式权限清单（切片 E，设计 C.3 呼应 dsh 借鉴）：
+ * - auto-allow：清单外且低危的工具，由 dev-assistant-ts 内置策略自动放行（推导展示，不存储）
+ * - needsApproval：每次执行前强制经审批墙确认
+ * - disabled：启动时不注册，LLM 不可见（改动需重启助手）
+ */
+export interface AssistantPolicy {
+  needsApproval: string[]
+  disabled: string[]
+}
+
+export const DEFAULT_ASSISTANT_POLICY: AssistantPolicy = {
+  needsApproval: ['write_file', 'edit_file'],
+  disabled: ['exec_command', 'run_hook'],
+}
+
+/** 技能预设（切片 H）：名称 + prompt 模板，持久化到 assistantStore；tools 为可选工具白名单（H.2 进阶） */
+export interface AssistantSkill {
+  id: string
+  name: string
+  prompt: string
+  tools?: string[]
+}
+
 interface AssistantState {
   // 模型配置（持久化）
   models: AssistantModelConfig[]
@@ -32,6 +56,25 @@ interface AssistantState {
   setRunning: (r: boolean) => void
   error: string
   setError: (e: string) => void
+
+  /** 审批墙开关（切片 D）：开启后高危工具调用经 assistant:events 推送审批请求 */
+  approvalEnabled: boolean
+  setApprovalEnabled: (v: boolean) => void
+
+  /** 三段式权限清单（切片 E）：随助手启动传入主进程生效 */
+  policy: AssistantPolicy
+  setPolicy: (p: AssistantPolicy) => void
+
+  /** 技能预设（切片 H，C.8「组合工具集+prompt 存预设」MVP）：可复用的 prompt 模板 */
+  skills: AssistantSkill[]
+  addSkill: (name: string, prompt: string, tools?: string[]) => void
+  removeSkill: (id: string) => void
+  /** 编辑技能（H.3）：局部更新名称/prompt/工具绑定 */
+  updateSkill: (id: string, patch: Partial<Pick<AssistantSkill, 'name' | 'prompt' | 'tools'>>) => void
+
+  /** 当前激活的技能模式（H.2）：name 供横幅展示，tools 供启动后重放工具过滤器 */
+  activeSkill: { name: string; tools: string[] | null } | null
+  setActiveSkill: (s: { name: string; tools: string[] | null } | null) => void
 
   // 聊天
   messages: AssistantChatMessage[]
@@ -89,6 +132,32 @@ export const useAssistantStore = create<AssistantState>()(
       error: '',
       setError: (error) => set({ error }),
 
+      approvalEnabled: false,
+      setApprovalEnabled: (approvalEnabled) => set({ approvalEnabled }),
+
+      policy: DEFAULT_ASSISTANT_POLICY,
+      setPolicy: (policy) => set({ policy }),
+
+      skills: [],
+      addSkill: (name, prompt, tools) =>
+        set({
+          skills: [
+            ...get().skills,
+            {
+              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+              name,
+              prompt,
+              ...(tools && tools.length > 0 ? { tools } : {}),
+            },
+          ],
+        }),
+      removeSkill: (id) => set({ skills: get().skills.filter((s) => s.id !== id) }),
+      updateSkill: (id, patch) =>
+        set({ skills: get().skills.map((s) => (s.id === id ? { ...s, ...patch } : s)) }),
+
+      activeSkill: null,
+      setActiveSkill: (activeSkill) => set({ activeSkill }),
+
       messages: [],
       pushMessage: (m) =>
         set({ messages: [...get().messages, { ...m, id: msgSeq++ }] }),
@@ -112,6 +181,8 @@ export const useAssistantStore = create<AssistantState>()(
       partialize: (state) => ({
         models: state.models,
         activeModel: state.activeModel,
+        policy: state.policy,
+        skills: state.skills,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true)

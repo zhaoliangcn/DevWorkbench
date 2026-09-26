@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { base64Transform } from './pure/base64'
 
 export function Base64Tool() {
   const [input, setInput] = useState('')
@@ -6,22 +7,15 @@ export function Base64Tool() {
   const [error, setError] = useState('')
 
   const encode = () => {
-    try {
-      setOutput(btoa(unescape(encodeURIComponent(input))))
-      setError('')
-    } catch {
-      setError('编码失败')
-    }
+    const r = base64Transform({ text: input, op: 'encode' })
+    setOutput(r.error ? '' : r.result)
+    setError(r.error ?? '')
   }
 
   const decode = () => {
-    try {
-      setOutput(decodeURIComponent(escape(atob(input))))
-      setError('')
-    } catch {
-      setError('解码失败: 输入不是有效的 Base64 字符串')
-      setOutput('')
-    }
+    const r = base64Transform({ text: input, op: 'decode' })
+    setOutput(r.error ? '' : r.result)
+    setError(r.error ?? '')
   }
 
   const clear = () => {

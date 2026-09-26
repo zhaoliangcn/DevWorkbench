@@ -733,3 +733,335 @@ tsx ^4.21.0
 | Zustand | 4 | 5 | 5 |
 | Electron Builder | 24 | 26 | 26 |
 | @vitejs/plugin-react | 4 | 6 | 6 |
+
+---
+
+## 附录 B: 可集成功能清单（演进路线）
+
+> 本附录记录 DevWorkbench 后续可集成的功能方向，作为演进路线参考。所有方向均坚持本地优先、单体源码集成，不引入云同步与插件系统（对齐 §1.2 非目标）。
+
+### B.1 核心方向：三工作区联动（差异化护城河）
+
+DevWorkbench 区别于 DevToys、Postman、Obsidian 单品的护城河，在于「知识库 + 工具箱 + AI Agent 同处一个进程」。详见附录 C。
+
+- 工具箱输出 → 一键存入知识库
+- AI Agent 调用工具箱纯函数能力
+- 全局捕获中心（Capture Inbox）
+
+### B.2 工作台骨架
+
+| 功能 | 说明 |
+|------|------|
+| 全局命令面板（Cmd/Ctrl+K） | 跨三域搜索：笔记/工具/Agent 历史/片段，回车即跳转 |
+| Git 工作区 | isomorphic-git 或系统 git，status/diff/commit/branch/log；Vault 文件天然适合版本管理 |
+| 多标签文件编辑器 | 复用 Monaco，打开 Vault/SSH 远端/临时草稿，统一知识库编辑器与代码编辑器 |
+| 剪贴板历史管理器 | 按类型智能预览（JSON/URL/Base64/代码），SnippetsModule 的自然延伸 |
+
+### B.3 AI Agent 能力显性化
+
+当前 `assistant.ts` 已埋设 `schedulerEnabled`、`approvalEnabled` 开关但 UI 未暴露。
+
+| 功能 | 说明 |
+|------|------|
+| 定时任务看板 | 查看/创建/暂停/删除定时任务、运行日志、失败重试 |
+| 工具调用审批墙 | `approvalEnabled` 显性化，危险工具挂起待批准/拒绝 |
+| Agent 技能编辑器 | 用 Markdown 写技能 prompt 存入 Vault，挂载工具集 |
+| 会话历史与分支 | 持久化会话、按笔记分支、跨会话检索（参考 dsh Trajectory） |
+
+### B.4 数据与服务层（网络分类缺口）
+
+| 功能 | 说明 |
+|------|------|
+| API 集合 + 环境变量 | Postman-lite：命名环境、`{{var}}` 插值、断言、链式请求 |
+| Webhook 接收器 | 复用 Express 3000 端口，加 `/webhook/*` 路由，实时展示请求 |
+| 通用 Cron 可视化 | 触发 HTTP/本地脚本/Agent 任务，复用 Express + 主进程定时器 |
+| Redis 客户端 + SQLite 浏览器 | 扩展 DatabaseTool，补 Redis 与 SQLite 文件直开 |
+
+### B.5 知识库深度功能（my-obsidian 血统延伸）
+
+| 功能 | 说明 |
+|------|------|
+| 每日笔记 + 模板系统 | 每日生成 `YYYY-MM-DD.md`，模板变量 `{{date}}`/`{{yesterday}}` |
+| 看板视图 / 日历视图 | 复用 d3（GraphView/MindMapView 同套可视化哲学） |
+| Excalidraw 白板 | 手绘图存为笔记附件，形成三种可视化 |
+| 间隔重复（Anki 化） | 笔记转闪卡，本地调度复习 |
+
+### B.6 DevOps 与系统监控
+
+| 功能 | 说明 |
+|------|------|
+| Docker 管理面板 | 本地 docker socket，容器/镜像/日志 |
+| 进程监视器 | 实时进程列表、CPU/内存排序、一键 kill（延伸 system:killProcess） |
+| 环境变量 / .env 管理器 | 多文件对比、缺失检测、生成 docker-compose 环境段 |
+
+### B.7 安全与隐私
+
+| 功能 | 说明 |
+|------|------|
+| 凭据保险库 | 主进程级加密存储（crypto-js），SSH/HTTP/DB 配置按引用取用 |
+| 笔记加密 | 单篇或整个 Vault 加密（本地密钥），crypto-js 已在依赖 |
+
+### B.8 优先级建议
+
+| 优先级 | 功能 | 理由 |
+|--------|------|------|
+| ★★★ | 工具箱→知识库 + Agent 调工具箱 | 三工作区联动，别家做不到 |
+| ★★★ | 全局命令面板 | 低成本高频，让工作台名副其实 |
+| ★★★ | 定时任务看板 + 审批墙 | 显性化已埋设的 Agent 能力 |
+| ★★☆ | Git 工作区 + 多标签编辑器 | 开发者骨架，契合 Vault 文件模型 |
+| ★★☆ | API 环境变量 + Webhook 接收器 | Express 已在跑，边际成本低 |
+| ★☆☆ | 每日笔记/模板/看板 | my-obsidian 血统的自然续作 |
+
+---
+
+## 附录 C: 三工作区联动详细设计
+
+> 本附录给出「打通知识库 / 工具箱 / AI 助手三个工作区」的工程方案，落到具体文件、函数与类型。
+
+### C.1 现状诊断：为什么现在联动不起来
+
+1. **三个 store 互相不可见**：`appStore` 只管当前工作区；`knowledgeStore`（导出为 `useStore`）、`toolboxStore`、`assistantStore` 各自独立，无共享层。
+2. **Assistant workingDir 被焊死**：`electron/ipc/assistant.ts` 中 `workingDir = getVaultPath()`，Agent 只能看到 Vault。
+3. **工具是 UI 组件不是函数**：`ModuleContent.tsx` 用 `moduleMap` 把字符串映射到 React 组件，逻辑封装在组件内部，外部与 Agent 无法调用。
+4. **切换工作区即销毁状态**：`App.tsx` 条件渲染卸载组件，仅靠 Zustand store 在组件外存状态才未丢失中间产物。
+
+核心对策：**新建一个跨工作区的共享总线层**。
+
+### C.2 链路一：工具箱输出 → 知识库
+
+#### 拼图
+- 工具箱组件内部有输出状态（JSON 格式化结果、HTTP 响应、SSH 日志…）
+- 知识库已有 `importNote(title, content, folderPath?)`，可直接落笔记、自动去重、写文件、抽标签
+
+#### 设计：三层
+
+**① 新建 `src/store/crossStore.ts` — 跨工作区共享总线**
+
+只存「在途的、跨域的」瞬态数据，不持久化（避免与各域 store 冲突）：
+
+```typescript
+import { create } from 'zustand'
+
+export interface Carry {
+  id: string
+  source: 'toolbox' | 'assistant' | 'knowledge' | 'capture'
+  kind: 'text' | 'json' | 'http-response' | 'ssh-log' | 'db-result' | 'image' | 'note-ref'
+  title: string
+  content: string
+  meta?: Record<string, unknown>
+  createdAt: number
+}
+
+interface CrossState {
+  carry: Carry | null
+  setCarry: (c: Carry | null) => void
+  recentLinks: Array<{ from: string; to: string; ts: number }>
+  pushLink: (from: string, to: string) => void
+}
+```
+
+单槽 + 历史，符合「带过去就落地」的心智模型。
+
+**② 新建 `src/shared/hooks/useSaveToVault.ts` — 复用动作**
+
+```typescript
+export function useSaveToVault() {
+  return useCallback(async (carry: Omit<Carry, 'id' | 'createdAt' | 'source'>) => {
+    const full: Carry = { ...carry, id: crypto.randomUUID(), source: 'toolbox', createdAt: Date.now() }
+    useCrossStore.getState().setCarry(full)
+    useAppStore.getState().setActiveWorkspace('knowledge')
+  }, [])
+}
+```
+
+**③ 工具组件侧：注入 `<SaveToVaultButton />`**
+
+挂在 `module-content` 容器层而非每个工具内部，无需改 26 个工具组件。获取当前工具输出的两种方案：
+
+| 方案 | 做法 | 评价 |
+|------|------|------|
+| A. 工具约定 | 每个工具通过 `useToolboxStore.setOutput()` 上抛 | 改 26 个组件，工作量大 |
+| B. 复制即捕获 | 浮动按钮读取当前激活 DOM 区域 `textarea`/`pre`/`.output` 的值 | 零侵入，先跑起来 |
+
+推荐先做 B，高价值工具（JSON/HTTP/DB）后续升级到 A。
+
+**④ 知识库侧：落地面板**
+
+`KnowledgeWorkspace.tsx` 顶层 `useEffect` 监听 `carry`：
+
+```typescript
+useEffect(() => {
+  const c = useCrossStore.getState().carry
+  if (c?.source === 'toolbox') setLandingOpen(true)
+}, [carry])
+```
+
+落地浮层提供：标题（默认工具名+时间戳）、目标文件夹（下拉 `getFolderTree()`）、是否追加 frontmatter（`#工具/{kind}`）、预览。确认后调 `importNote`，再 `setCarry(null)` 清槽。
+
+### C.3 链路二：AI Agent 调用工具箱能力
+
+#### 关键洞察：别让 Agent 调 UI 组件，让它调纯函数
+
+工具箱核心逻辑多为 `string → string`，可抽离。
+
+#### 阶段 1：抽取工具纯函数（不改 Agent）
+
+新建 `src/workspaces/toolbox/tools/pure/` 目录：
+
+```typescript
+// src/workspaces/toolbox/tools/pure/base64.ts
+export interface Base64Input  { text: string; op: 'encode' | 'decode' }
+export interface Base64Output { result: string; error?: string }
+export function base64Transform(input: Base64Input): Base64Output { /* ... */ }
+```
+
+候选（按纯函数化难度排序）：Base64、进制转换、时间戳、URL 编解码、文件哈希、正则匹配、格式互转、加密解密。
+
+此步零风险：现有组件改为调用纯函数，UI 行为不变，逻辑被「解封」。
+
+#### 阶段 2：注册成 Agent 工具契约
+
+主进程新建 `electron/ipc/assistant-tools.ts`：
+
+```typescript
+export function buildToolboxToolContract(name: string) {
+  switch (name) {
+    case 'base64': return {
+      description: 'Base64 编解码',
+      parameters: { text: 'string', op: '"encode"|"decode"' },
+      execute: (args) => base64Transform(args),
+    }
+  }
+}
+```
+
+`preload.ts` 的 `assistant.start` options 增加 `extraToolNames?: string[]`；`assistant.ts` 在现有 `disabledTools` 做减法之外，新增 `extraTools` 通道做加法。
+
+#### 完整调用链
+
+```
+用户输入「把这段 Base64 解码并存成笔记」
+  → assistant:run(message)
+  → 主进程 Agent 循环
+  → Agent 调 base64 工具契约（纯函数，主进程同步执行）
+  → Agent 调 file:write 写入 Vault
+  → assistant:events 广播 toolCall/toolResult
+  → 渲染端流式渲染
+```
+
+此链路在一个 Agent 任务里串起三工作区：工具箱（纯函数）→ Agent（编排）→ 知识库（落地）。
+
+#### 安全边界（呼应 dsh 借鉴）
+
+`assistant.ts` 现有 `DEFAULT_DISABLED_TOOLS` 之外，新增三段式清单（存于 data IPC）：
+
+```
+auto-allow:      [base64, url, timestamp, ...]    # 自动放行
+needs-approval:  [file:write, file:delete]        # 挂起，UI 审批
+disabled:        [exec_command, run_hook, ssh:*]   # 禁用
+```
+
+审批触发时 `assistant:events` 发 `approvalRequest`，`AssistantWorkspace.tsx` 渲染「批准/拒绝」按钮，把焊死的 `approvalEnabled: false` 变成可控边界。
+
+### C.4 链路三：全局捕获中心（Capture Inbox）
+
+快捷键唤起的浮层，不占工作区 tab，作为三工作区统一入口。
+
+#### 组件结构
+
+```
+App.tsx
+  ├─ <TopNav />              (已有)
+  ├─ <WorkspaceBody />       (已有，条件渲染)
+  ├─ <CapturePalette />      ← 新增，Cmd/Ctrl+Shift+K 唤起
+  └─ <CarryIndicator />      ← 新增，右下角徽章，显示当前 carry
+```
+
+#### 四种去向
+
+| 去向 | 动作 |
+|------|------|
+| 存为笔记 | `setCarry({source:'capture', ...})` → 跳知识库 → 落地浮层 |
+| 喂给 Agent | `setCarry(...)` → 跳助手 → 自动填入输入框 |
+| 跑工具 | 识别内容（JSON/Base64/URL/时间戳）→ 自动选工具 → 跳工具箱 → 自动填入 |
+| 存为代码片段 | 调 `data:save` 写入 SnippetsModule 存储 |
+
+#### 智能识别（复用 C.3 纯函数）
+
+```typescript
+function detectKind(text: string): Carry['kind'] {
+  if (/^\s*[\{\[]/.test(text)) return 'json'
+  if (/^[A-Za-z0-9+/=]+$/.test(text) && text.length % 4 === 0) return 'base64'
+  if (/^https?:\/\//.test(text)) return 'url'
+  if (/^\d{10}$/.test(text)) return 'timestamp'
+  return 'text'
+}
+```
+
+检测器 = Agent 工具契约 = 工具箱 UI 逻辑，三者同源，体现打通的复利。
+
+### C.5 链路四：知识库 → Agent 上下文
+
+#### 现状
+`AssistantWorkspace.tsx` 输入框是裸的，Agent workingDir 是 Vault 能读所有笔记，但用户无法指定「这次对话基于哪篇笔记」。
+
+#### 设计：笔记上下文钉选
+
+`knowledgeStore` 增加 `pinnedForAssistant: string[]`；`MarkdownEditor` 顶部加「📌 钉到助手」按钮；`AssistantWorkspace` 顶部显示已钉笔记 chip，发送时拼入消息：
+
+```typescript
+const handleSend = async () => {
+  const pinned = useKnowledgeStore.getState().pinnedForAssistant
+  const context = pinned.length
+    ? `【基于以下笔记回答】\n${pinned.map(id => notes[id].path).join('\n')}\n\n${text}`
+    : text
+  await assistantAPI.run(context)
+}
+```
+
+最小侵入：不碰 `assistant.ts` 主进程逻辑，仅通过消息文本传递信号，Agent 用已有 `file:read` 读取。
+
+进阶版（后续）在 `assistant:run` 加 `contextFiles: string[]` 参数，主进程注入 system prompt，比文本拼接更干净。
+
+### C.6 改动落点清单（按依赖顺序）
+
+| 顺序 | 文件 | 改动 | 链路 |
+|------|------|------|------|
+| 1 | 新建 `src/store/crossStore.ts` | 跨工作区总线（carry + recentLinks） | 一、三 |
+| 2 | 新建 `src/shared/hooks/useSaveToVault.ts` | 装载 carry + 跳工作区 | 一 |
+| 3 | 新建 `src/workspaces/knowledge/components/CarryLanding.tsx` | 知识库落地浮层 | 一 |
+| 4 | `KnowledgeWorkspace.tsx` | 挂载落地浮层 + 监听 carry | 一 |
+| 5 | `ModuleContent.tsx` | 容器层加 `<SaveToVaultButton />` | 一 |
+| 6 | `App.tsx` | 顶层挂 `<CapturePalette />` + `<CarryIndicator />` | 三 |
+| 7 | 新建 `src/workspaces/toolbox/tools/pure/*.ts` | 抽取工具纯函数 | 二、三 |
+| 8 | `ModuleContent.tsx` | 工具组件改用纯函数（渐进） | 二 |
+| 9 | 新建 `electron/ipc/assistant-tools.ts` | 纯函数→Agent 工具契约 | 二 |
+| 10 | `electron/preload.ts` | `assistant.start` 加 `extraToolNames` | 二 |
+| 11 | `electron/ipc/assistant.ts` | 注入 extraTools + 三段式权限清单 | 二 |
+| 12 | `AssistantWorkspace.tsx` | 渲染审批事件 + 钉选笔记 chip | 二、四 |
+| 13 | `knowledgeStore.ts` | 加 `pinnedForAssistant` + 钉选方法 | 四 |
+| 14 | `MarkdownEditor.tsx` | 「钉到助手」按钮 | 四 |
+
+### C.7 推荐实施切片（MVP 顺序）
+
+每一片独立交付价值：
+
+- **切片 A（1-5）**：工具箱→知识库联动。最直观，用户立刻感知「工具产物进了笔记」。
+- **切片 B（7-8 部分 + 9-11）**：Agent 调工具箱。先接 3 个纯函数工具（base64/时间戳/json 格式化），验证契约链路再扩。
+- **切片 C（6 + Capture）**：全局捕获中心。复用 A、B 的 carry 与纯函数。
+- **切片 D（12-14）**：知识库→Agent 钉选 + 审批墙 UI。
+
+切片 A 完成即有「别家没有的第一条联动链路」；四片全做完，三工作区成为有机的「开发者工作台」。
+
+### C.8 dsh 借鉴映射
+
+本附录的设计部分受 DeepSeek Harness（dsh，2026 年 8 月开源）范式启发：
+
+| DevWorkbench 联动设计 | 对应 dsh 概念 | 借鉴形态 |
+|----------------------|--------------|----------|
+| 会话历史与分支 | Trajectory append-only 事件流 + fork | 持久化 trajectory + 分轨查看 + fork 重跑 |
+| 审批墙 | approval + 沙箱契约 | 三段式权限清单 + 挂起审批 |
+| Agent 调工具箱 | Tool Contract 强类型契约 | TS 契约暴露纯函数工具 |
+| 技能编辑器 / 模式 | skills 插件 + Creator 模式 | 组合工具集+prompt 存预设 |
+
+区别：dsh 是 Web/CLI 的 Agent 运行时；DevWorkbench 是 Electron 本地工作台，且多了「知识库+工具箱」这一 dsh 没有的差异化地基，不做完整插件系统（对齐 §1.2）。

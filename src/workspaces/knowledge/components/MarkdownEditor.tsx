@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useStore } from '../../../store/knowledgeStore'
 import { marked } from 'marked'
 import type { EditorMode } from '../../../types'
-import { Edit3, Eye, Columns, Bold, Italic, Link, Code, FileDown, FileText } from 'lucide-react'
+import { Edit3, Eye, Columns, Bold, Italic, Link, Code, FileDown, FileText, Pin, PinOff } from 'lucide-react'
 import { exportToDocx, exportToPdf } from '../utils/export'
 
 marked.setOptions({
@@ -31,6 +31,8 @@ export default function MarkdownEditor() {
   const updateNoteContent = useStore((s) => s.updateNoteContent)
   const updateNoteTitle = useStore((s) => s.updateNoteTitle)
   const navigateToNote = useStore((s) => s.navigateToNote)
+  const pinnedForAssistant = useStore((s) => s.pinnedForAssistant)
+  const togglePinForAssistant = useStore((s) => s.togglePinForAssistant)
 
   const [mode, setMode] = useState<EditorMode>('edit')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -208,6 +210,13 @@ export default function MarkdownEditor() {
           </div>
 
           <div className="toolbar-group export-group">
+            <button
+              className={`icon-btn ${activeNote && pinnedForAssistant.includes(activeNote.id) ? 'active' : ''}`}
+              onClick={() => togglePinForAssistant(activeNote.id)}
+              title={activeNote && pinnedForAssistant.includes(activeNote.id) ? '取消钉到助手' : '钉到助手（发送消息时作为上下文）'}
+            >
+              {activeNote && pinnedForAssistant.includes(activeNote.id) ? <PinOff size={16} /> : <Pin size={16} />}
+            </button>
             <button
               className="icon-btn"
               onClick={handleExportDocx}

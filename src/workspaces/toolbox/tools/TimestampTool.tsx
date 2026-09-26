@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { timestampTransform, formatInTimezone } from './pure/timestamp'
 
 const timezones = [
   { name: '本地时间', tz: 'local' },
@@ -27,39 +28,14 @@ export function TimestampTool() {
     return () => clearInterval(timer)
   }, [])
 
-  const formatInTimezone = (date: Date, tz: string) => {
-    return date.toLocaleString('zh-CN', {
-      timeZone: tz === 'local' ? undefined : tz,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    })
-  }
-
   const timestampToDate = () => {
-    try {
-      const ts = parseInt(timestamp)
-      const isMillisecond = ts > 1e12
-      const date = new Date(isMillisecond ? ts : ts * 1000)
-      if (isNaN(date.getTime())) throw new Error('Invalid date')
-      setResult(`${date.toISOString()}\n本地: ${date.toLocaleString('zh-CN')}\n${selectedTz}: ${formatInTimezone(date, selectedTz)}`)
-    } catch {
-      setResult('无效的时间戳')
-    }
+    const r = timestampTransform({ value: timestamp, action: 'toDatetime', tz: selectedTz })
+    setResult(r.error ?? r.result)
   }
 
   const dateToTimestamp = () => {
-    try {
-      const date = new Date(dateStr)
-      if (isNaN(date.getTime())) throw new Error('Invalid date')
-      setResult(`秒: ${Math.floor(date.getTime() / 1000)}\n毫秒: ${date.getTime()}`)
-    } catch {
-      setResult('无效的日期格式')
-    }
+    const r = timestampTransform({ value: dateStr, action: 'toUnix' })
+    setResult(r.error ?? r.result)
   }
 
   const calculateDateDiff = () => {

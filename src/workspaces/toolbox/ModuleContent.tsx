@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { JsonTool } from './tools/JsonTool'
 import { UrlTool } from './tools/UrlTool'
 import { Base64Tool } from './tools/Base64Tool'
@@ -25,6 +26,7 @@ import { ImageTool } from './tools/ImageTool'
 import { SnippetsModule } from './tools/SnippetsModule'
 import { NotesModule } from './tools/NotesModule'
 import { SystemModule } from './tools/SystemModule'
+import { SaveToVaultButton } from './SaveToVaultButton'
 import { TOOLBOX_MODULES } from '../../shared/constants'
 
 interface ModuleContentProps {
@@ -63,10 +65,14 @@ const moduleMap: Record<string, React.ComponentType> = {
 
 export function ModuleContent({ module }: ModuleContentProps) {
   const ModuleComponent = moduleMap[module]
+  const containerRef = useRef<HTMLDivElement>(null)
+
   if (ModuleComponent) {
+    const mod = TOOLBOX_MODULES.find((m) => m.id === module)
     return (
-      <div className="module-content">
+      <div className="module-content" ref={containerRef}>
         <ModuleComponent />
+        <SaveToVaultButton moduleName={mod?.name ?? module} containerRef={containerRef} />
       </div>
     )
   }

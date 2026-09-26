@@ -108,6 +108,13 @@ interface ElectronAPI {
       models: AssistantModelConfig[]
       schedulerEnabled?: boolean
       approvalEnabled?: boolean
+      /** 注入的工具箱工具名（缺省注册全部 toolbox_*） */
+      extraToolNames?: string[]
+      /** 三段式权限清单（切片 E）：needsApproval 强制审批，disabled 不注册 */
+      policy?: {
+        needsApproval?: string[]
+        disabled?: string[]
+      }
       port?: number
     }) => Promise<{ success: boolean; error?: string; status: AssistantStatus | null }>
     stop: () => Promise<{ success: boolean; error?: string }>
@@ -116,6 +123,21 @@ interface ElectronAPI {
     setModels: (models: unknown[]) => Promise<{ success: boolean; error?: string }>
     switchModel: (name: string) => Promise<boolean>
     providers: () => Promise<string[]>
+    /** 审批墙：运行时切换审批模式（切片 D） */
+    setApprovalMode: (enabled: boolean) => Promise<{ success: boolean; enabled?: boolean; error?: string }>
+    /** 审批墙：对一次审批请求回应批准/拒绝（切片 D） */
+    approvalResponse: (id: string, approved: boolean) => Promise<{ success: boolean; error?: string }>
+    /** 会话历史（切片 F）：Trajectory 事件流查看 */
+    historyList: () => Promise<{
+      success: boolean
+      error?: string
+      sessions: { sessionId: string; file: string; mtimeMs: number; size: number }[]
+    }>
+    historyRead: (file: string) => Promise<{ success: boolean; error?: string; events: AssistantHistoryEvent[] }>
+    historyDelete: (file: string) => Promise<{ success: boolean; error?: string }>
+    /** 技能预设进阶（切片 H.2）：工具清单与运行时工具子集 */
+    toolsList: () => Promise<{ success: boolean; error?: string; names: string[] }>
+    setToolFilter: (names: string[] | null) => Promise<{ success: boolean; error?: string }>
     onEvent: (callback: (e: unknown) => void) => () => void
   }
 }
@@ -127,6 +149,26 @@ interface AssistantStatus {
   sessionId: string | null
   providerNames: string[]
   activeProvider: string | null
+}
+
+/** 会话历史事件（切片 F，对齐 dev-assistant-ts SessionEvent 结构化子集） */
+interface AssistantHistoryEvent {
+  type:
+    | 'user_message'
+    | 'assistant_message'
+    | 'system_message'
+    | 'tool_call_request'
+    | 'tool_result'
+    | 'context_compression'
+    | 'summary_saved'
+  timestamp: string
+  content?: string
+  name?: string
+  success?: boolean
+  arguments?: unknown
+  beforeTokens?: number
+  afterTokens?: number
+  level?: number
 }
 
 interface AssistantModelConfig {

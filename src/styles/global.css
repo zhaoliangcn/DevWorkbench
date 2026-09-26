@@ -295,3 +295,155 @@ body {
 .about-info p:last-child {
   margin-bottom: 0;
 }
+
+/* ---------- 跨工作区联动：全局捕获中心 + 携带物徽章（切片 C） ---------- */
+.capture-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+
+.capture-panel {
+  width: min(640px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.capture-input-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.capture-icon {
+  margin-top: 10px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.capture-input {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.capture-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.capture-kind {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.capture-kind.kind-json,
+.capture-kind.kind-url,
+.capture-kind.kind-timestamp {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.capture-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.capture-action:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.capture-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.capture-toast {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.carry-indicator {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  max-width: 320px;
+}
+
+.carry-indicator-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.carry-indicator-title {
+  font-size: 12px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carry-indicator-go,
+.carry-indicator-drop {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.carry-indicator-go:hover {
+  color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.carry-indicator-drop:hover {
+  color: var(--color-danger);
+  background: var(--color-bg);
+}

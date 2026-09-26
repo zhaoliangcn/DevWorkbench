@@ -36,6 +36,8 @@ interface AppState {
   aiConfig: AiConfig
   vaultName: string | null
   vaultReady: boolean
+  /** 已钉到 AI 助手的笔记 id（发送消息时作为上下文，见设计文档 C.5） */
+  pinnedForAssistant: string[]
 
   createNote: (folderPath?: string) => string
   deleteNote: (id: string) => void
@@ -61,6 +63,7 @@ interface AppState {
   searchNotes: (query: string) => Note[]
   navigateToNote: (title: string) => void
   importNote: (title: string, content: string, folderPath?: string) => string
+  togglePinForAssistant: (id: string) => void
   updateAiConfig: (config: Partial<AiConfig>) => void
   openVault: () => Promise<void>
   loadVaultFromDisk: () => Promise<void>
@@ -232,6 +235,7 @@ export const useStore = create<AppState>()(
       aiConfig: getDefaultConfig('ollama'),
       vaultName: null,
       vaultReady: false,
+      pinnedForAssistant: [],
 
       createNote: (folderPath?: string) => {
         const id = generateNoteId()
@@ -272,7 +276,12 @@ export const useStore = create<AppState>()(
             state.activeNoteId === id
               ? Object.keys(rest)[0] || null
               : state.activeNoteId
-          return { notes: rest, activeNoteId: newActiveId }
+          return {
+            notes: rest,
+            activeNoteId: newActiveId,
+            // 删除笔记时同步清理钉选，避免悬空引用
+            pinnedForAssistant: state.pinnedForAssistant.filter((p) => p !== id),
+          }
         })
       },
 
@@ -514,6 +523,14 @@ export const useStore = create<AppState>()(
         return id
       },
 
+      togglePinForAssistant: (id: string) => {
+        set((state) => ({
+          pinnedForAssistant: state.pinnedForAssistant.includes(id)
+            ? state.pinnedForAssistant.filter((p) => p !== id)
+            : [...state.pinnedForAssistant, id],
+        }))
+      },
+
       updateAiConfig: (config: Partial<AiConfig>) => {
         set((state) => ({
           aiConfig: { ...state.aiConfig, ...config },
@@ -582,6 +599,7 @@ export const useStore = create<AppState>()(
         activeNoteId: state.activeNoteId,
         aiConfig: state.aiConfig,
         theme: state.theme,
+        pinnedForAssistant: state.pinnedForAssistant,
       }),
     }
   )

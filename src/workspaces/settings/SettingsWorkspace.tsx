@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { useAssistantStore } from '../../store/assistantStore'
+import { useAssistantStore, DEFAULT_ASSISTANT_POLICY } from '../../store/assistantStore'
 import { electronAPI } from '../toolbox/utils/electron'
 import { assistantAPI } from '../assistant/utils/electron'
 import { Plus, Trash2, Power, PowerOff } from 'lucide-react'
@@ -26,16 +26,49 @@ export function SettingsWorkspace() {
   const assistantError = useAssistantStore((s) => s.error)
   const [saving, setSaving] = useState(false)
 
+  // 三段式权限清单（切片 E）：本地文本编辑态，保存时解析为清单
+  const [needsApprovalText, setNeedsApprovalText] = useState(
+    useAssistantStore.getState().policy.needsApproval.join(', '),
+  )
+  const [disabledText, setDisabledText] = useState(
+    useAssistantStore.getState().policy.disabled.join(', '),
+  )
+  const [policySaved, setPolicySaved] = useState(false)
+
+  /** 逗号 / 中文逗号 / 空白分隔 → 去重清单 */
+  const parseList = (text: string) =>
+    [...new Set(text.split(/[,，\s]+/).map((t) => t.trim()).filter(Boolean))]
+
+  const currentPolicy = () => ({
+    needsApproval: parseList(needsApprovalText),
+    disabled: parseList(disabledText),
+  })
+
+  const handleSavePolicy = () => {
+    useAssistantStore.getState().setPolicy(currentPolicy())
+    setPolicySaved(true)
+    setTimeout(() => setPolicySaved(false), 2000)
+  }
+
+  const handleResetPolicy = () => {
+    setNeedsApprovalText(DEFAULT_ASSISTANT_POLICY.needsApproval.join(', '))
+    setDisabledText(DEFAULT_ASSISTANT_POLICY.disabled.join(', '))
+    useAssistantStore.getState().setPolicy(DEFAULT_ASSISTANT_POLICY)
+  }
+
   const applyAssistantConfig = async (modelsToSave?: AssistantModelConfig[]) => {
     const finalModels = modelsToSave ?? models
     const active = finalModels.find((m) => m.name === activeModel) ?? finalModels[0]
     if (!active) return
     setSaving(true)
     try {
+      const policy = currentPolicy()
+      useAssistantStore.getState().setPolicy(policy)
       const res = await assistantAPI.start({
         models: finalModels,
         schedulerEnabled: true,
-        approvalEnabled: false,
+        approvalEnabled: useAssistantStore.getState().approvalEnabled,
+        policy,
       })
       useAssistantStore.getState().setStatus(res.status)
       useAssistantStore.getState().setError(res.error ?? '')
@@ -233,6 +266,40 @@ export function SettingsWorkspace() {
             >
               {assistantStatus?.running ? <PowerOff size={13} /> : <Power size={13} />} 停止助手
             </button>
+          </div>
+
+          <div className="assistant-policy-card">
+            <h5>工具权限（三段式清单）</h5>
+            <p className="settings-hint">
+              强制审批：名单内工具每次执行前弹出审批确认；禁用：启动时不注册（LLM 不可见，含任意命令执行面）；
+              其余低危工具自动放行。以逗号分隔，「保存并重启助手」后生效。
+            </p>
+            <label>
+              强制审批（needs-approval）
+              <input
+                value={needsApprovalText}
+                onChange={(e) => setNeedsApprovalText(e.target.value)}
+                placeholder="write_file, edit_file"
+                spellCheck={false}
+              />
+            </label>
+            <label>
+              禁用（disabled）
+              <input
+                value={disabledText}
+                onChange={(e) => setDisabledText(e.target.value)}
+                placeholder="exec_command, run_hook"
+                spellCheck={false}
+              />
+            </label>
+            <div className="assistant-model-actions">
+              <button className="assistant-btn primary" onClick={handleSavePolicy}>
+                {policySaved ? '已保存' : '保存权限清单'}
+              </button>
+              <button className="assistant-btn" onClick={handleResetPolicy}>
+                恢复默认
+              </button>
+            </div>
           </div>
 
           {assistantStatus?.running && (

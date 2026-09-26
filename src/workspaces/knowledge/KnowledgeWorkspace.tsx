@@ -3,6 +3,7 @@ import { useStore } from '../../store/knowledgeStore'
 import Sidebar from './components/Sidebar'
 import RightPanel from './components/RightPanel'
 import MarkdownEditor from './components/MarkdownEditor'
+import { CarryLanding } from './components/CarryLanding'
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { tryRestoreVault } from './utils/filesystem'
 import { useAppStore } from '../../store/appStore'
@@ -69,6 +70,9 @@ export function KnowledgeWorkspace() {
 
         {rightPanelVisible && <RightPanel />}
       </div>
+
+      {/* 跨工作区联动：工具箱/AI 助手等来源的携带物落地确认浮层（切片 A） */}
+      <CarryLanding />
     </div>
   )
 }

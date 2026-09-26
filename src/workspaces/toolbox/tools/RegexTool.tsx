@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { regexTest } from './pure/regex'
 
 interface RegexTemplate {
   id: string
@@ -33,26 +34,9 @@ export function RegexTool() {
   const [showTemplates, setShowTemplates] = useState(false)
 
   const testRegex = () => {
-    try {
-      const regex = new RegExp(pattern, flags)
-      const results: { match: string; groups: (string | undefined)[]; index: number }[] = []
-      let match
-
-      while ((match = regex.exec(input)) !== null) {
-        results.push({
-          match: match[0],
-          groups: match.slice(1),
-          index: match.index,
-        })
-        if (!flags.includes('g')) break
-      }
-
-      setMatches(results)
-      setError('')
-    } catch (e) {
-      setError((e as Error).message)
-      setMatches([])
-    }
+    const r = regexTest({ pattern, flags, text: input })
+    setMatches(r.matches)
+    setError(r.error ?? '')
   }
 
   const applyTemplate = (template: RegexTemplate) => {

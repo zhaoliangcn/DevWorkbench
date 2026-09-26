@@ -5,6 +5,8 @@ import { KnowledgeWorkspace } from './workspaces/knowledge/KnowledgeWorkspace'
 import { AssistantWorkspace } from './workspaces/assistant/AssistantWorkspace'
 import { ToolboxWorkspace } from './workspaces/toolbox/ToolboxWorkspace'
 import { SettingsWorkspace } from './workspaces/settings/SettingsWorkspace'
+import { CapturePalette } from './shared/components/CapturePalette'
+import { CarryIndicator } from './shared/components/CarryIndicator'
 
 const NAV_ITEMS: Array<{ key: Workspace; label: string; icon: React.ComponentType<{ size?: number }> }> = [
   { key: 'knowledge', label: '知识库', icon: BookOpen },
@@ -66,6 +68,10 @@ export default function App() {
         {activeWorkspace === 'toolbox' && <ToolboxWorkspace />}
         {activeWorkspace === 'settings' && <SettingsWorkspace />}
       </main>
+
+      {/* 跨工作区联动：全局捕获中心 + 携带物徽章（切片 C） */}
+      <CapturePalette />
+      <CarryIndicator />
     </div>
   )
 }

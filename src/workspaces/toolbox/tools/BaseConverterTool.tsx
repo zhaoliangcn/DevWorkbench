@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import { radixConvert } from './pure/radix'
+
+/** 全部进制快速参考（复用同一纯函数，无精度丢失） */
+function convertAll(value: string, fromBase: number): string {
+  return [2, 8, 10, 16]
+    .map((b) => `${b}进制: ${radixConvert({ value, fromBase, toBase: b }).result}`)
+    .join('\n')
+}
 
 export function BaseConverterTool() {
   const [input, setInput] = useState('')
@@ -6,15 +14,8 @@ export function BaseConverterTool() {
   const [toBase, setToBase] = useState(2)
 
   const convert = () => {
-    try {
-      const decimalValue = parseInt(input, fromBase)
-      if (isNaN(decimalValue)) {
-        return '无效的输入'
-      }
-      return decimalValue.toString(toBase)
-    } catch {
-      return '转换失败'
-    }
+    const r = radixConvert({ value: input, fromBase, toBase })
+    return r.error ?? r.result
   }
 
   return (
@@ -69,11 +70,7 @@ export function BaseConverterTool() {
         <div className="tool-section">
           <h4>快速参考</h4>
           <div className="result-display">
-            <textarea
-              value={`二进制: ${input ? parseInt(input, fromBase).toString(2) : ''}\n八进制: ${input ? parseInt(input, fromBase).toString(8) : ''}\n十进制: ${input ? parseInt(input, fromBase).toString(10) : ''}\n十六进制: ${input ? parseInt(input, fromBase).toString(16) : ''}`}
-              readOnly
-              rows={4}
-            />
+            <textarea value={input ? convertAll(input, fromBase) : ''} readOnly rows={4} />
           </div>
         </div>
       </div>

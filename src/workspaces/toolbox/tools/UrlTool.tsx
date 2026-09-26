@@ -1,23 +1,18 @@
 import { useState } from 'react'
+import { urlTransform } from './pure/url'
 
 export function UrlTool() {
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
 
   const encode = () => {
-    try {
-      setOutput(encodeURIComponent(input))
-    } catch {
-      setOutput('编码失败')
-    }
+    const r = urlTransform({ text: input, op: 'encode' })
+    setOutput(r.error ? r.error : r.result)
   }
 
   const decode = () => {
-    try {
-      setOutput(decodeURIComponent(input))
-    } catch {
-      setOutput('解码失败: 输入不是有效的编码URL')
-    }
+    const r = urlTransform({ text: input, op: 'decode' })
+    setOutput(r.error ? r.error : r.result)
   }
 
   const clear = () => {

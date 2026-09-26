@@ -974,6 +974,144 @@
   background: var(--text-muted);
 }
 
+/* ---------- 跨工作区联动：携带物落地浮层（切片 A） ---------- */
+.carry-landing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carry-landing-panel {
+  width: min(620px, 92vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.carry-landing-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+
+.carry-landing-header h3 {
+  margin: 0;
+  font-size: 15px;
+  flex: 1;
+}
+
+.carry-landing-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.carry-landing-close {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.carry-landing-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.carry-landing-row {
+  display: flex;
+  gap: 8px;
+}
+
+.carry-landing-row input[type='text'] {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.carry-landing-row select {
+  min-width: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.carry-landing-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.carry-landing-preview {
+  flex: 1;
+  min-height: 120px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.carry-landing-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.carry-landing-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.carry-landing-btn:hover {
+  background: var(--bg-hover);
+}
+
+.carry-landing-btn.primary {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+.carry-landing-btn.primary:hover {
+  background: var(--accent-hover);
+}
+
 /* AI Panel */
 .ai-panel {
   display: flex;

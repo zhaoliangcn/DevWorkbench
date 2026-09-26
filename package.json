@@ -19,7 +19,9 @@
     "electron:build": "npm run build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && electron-builder",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
@@ -67,7 +69,8 @@
     "tsx": "^4.21.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.11"
   },
   "build": {
     "appId": "com.devworkbench.app",
