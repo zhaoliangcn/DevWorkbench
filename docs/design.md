@@ -1065,3 +1065,74 @@ const handleSend = async () => {
 | 技能编辑器 / 模式 | skills 插件 + Creator 模式 | 组合工具集+prompt 存预设 |
 
 区别：dsh 是 Web/CLI 的 Agent 运行时；DevWorkbench 是 Electron 本地工作台，且多了「知识库+工具箱」这一 dsh 没有的差异化地基，不做完整插件系统（对齐 §1.2）。
+
+---
+
+## 附录 D：工作台骨架强化设计（Shell Hardening）
+
+> 2026-09-26。目标：把"能用"的外壳升级为可长期生长的骨架 —— 崩溃隔离、单一事实源、保活、分包。按 P0→P3 分级实施，P3 只留扩展点。
+
+### D.1 现状盘点
+
+- 导航：`App.tsx` 中 `NAV_ITEMS` 硬编码 + 下方四行 `{activeWorkspace === 'x' && <XWorkspace />}` 条件渲染，**两处同步维护**
+- 挂载策略：切换即卸载重挂载（无保活）；`AssistantWorkspace.startedRef` 首启守卫即为补偿此设计
+- 隔离：零 ErrorBoundary —— 任一工作区抛错，全应用白屏
+- 加载：无代码分割，Monaco/xterm/marked 全进首屏 bundle
+- 扩展点：工具箱 `moduleMap` 亦为硬编码 Record；新增功能区需改 3+ 处
+
+### D.2 薄弱点诊断
+
+| # | 薄弱点 | 实际代价 |
+|---|--------|---------|
+| 1 | 无错误边界 | SSH/编辑器异常 → 全应用白屏，跨区联动全灭 |
+| 2 | 切换即卸载 | 输入草稿、滚动位置、编辑器 undo、SSH 会话全丢；组件重复挂载开销 |
+| 3 | 双硬编码注册 | 新工作区 = 改多处；全局件（徽章等）无法自动感知新工作区 |
+| 4 | 无分包 | 首屏载全部重依赖，Electron 冷启动白屏期拉长 |
+| 5 | 快捷键碎片化 | Cmd+Shift+K 已有，工作区切换无快捷键，命令入口分散 |
+
+### D.3 强化方案
+
+#### P0 —— 崩溃隔离 + 注册表（地基）
+
+1. **分层 ErrorBoundary**：根级兜底 + 每工作区一层。边界内提供「重试」按钮（重挂载子树）。
+   - 落点：`src/shared/components/ErrorBoundary.tsx`（class 组件，约 40 行）；`App.tsx` 包裹每个工作区。
+2. **工作区注册表**（单一事实源）：
+   ```ts
+   // src/shared/workspaces.ts
+   defineWorkspace({ key: 'knowledge', label: '知识库', icon: BookOpen,
+                     component: lazy(() => import('...')), order: 1 })
+   ```
+   `NAV_ITEMS` 与渲染循环均从注册表派生；新增工作区 = 加 1 条记录。
+   - 落点：`src/shared/workspaces.ts`（新）+ `App.tsx` 重写渲染段；工具箱 `moduleMap` 同法收敛为注册表。
+
+#### P1 —— 保活与键盘体系（体验质变）
+
+3. **`<Activity mode="hidden">` 保活**（React 19 内置）：四工作区常驻挂载，隐藏时保留全部状态（草稿/滚动/undo/SSH 会话），切换零重挂载。
+   - 配套约束：隐藏的工作区应暂停订阅（Assistant 的 `onEvent`、SSH 数据流），避免后台空转 —— 各工作区用 `useIsActive()` 派生开关。
+4. **快捷键统一**：`Cmd/Ctrl+1..4` 切工作区；与既有 `Cmd+Shift+K` 一并收进 `useGlobalShortcuts` hook（挂 App 根部，单一清理点）。
+
+#### P2 —— 加载与入口收敛
+
+5. **React.lazy 按工作区分包**：knowledge / assistant（Monaco）/ toolbox（xterm）三块收益最大；Suspense 骨架屏兜底。
+6. **CapturePalette → CommandPalette**：工作区跳转 + 工具直达 + 技能应用 + 笔记搜索统一入口（骨架的"命令总线"）。保留既有快捷键，逐步扩充动作源。
+
+#### P3 —— 扩展点（只留钩子，暂不实现）
+
+7. **布局模式**：`workspace-body` 预留 `single | split`（知识库+助手并排是附录 C 链路的自然延伸）；注册表预留 `preferredLayout` 字段。
+8. **store 工厂**：`createPersistedStore(name, initializer)` 统一 persist key 前缀 + `version/migrate`；现有 5 个 store 渐进迁移。
+9. **窗口基础设施**：Electron 窗口尺寸/位置持久化、自定义标题栏（`titleBarStyle: 'hiddenInset'`）。
+
+### D.4 实施顺序与验收
+
+| 阶段 | 内容 | 验收 |
+|------|------|------|
+| P0 | ErrorBoundary + 注册表 | 任意工作区手动 throw 仅白该区；新增工作区只改 1 处 |
+| P1 | Activity 保活 + 快捷键 | 切区后草稿/滚动保留；Cmd+1..4 生效；隐藏区无多余网络活动 |
+| P2 | lazy 分包 + CommandPalette | 首屏 chunk 不含 monaco/xterm；单入口可达全部功能 |
+| P3 | 扩展点 | 仅类型与占位，不改变运行时行为 |
+
+### D.5 风险与对策
+
+- `Activity` 为 React 19.2+ 特性：若当前 React 小版本不足，降级为「全挂载 + CSS display 切换」等价实现（保活语义相同，仅无官方卸载调度）。
+- 保活与 lazy 组合时，隐藏工作区首挂载即触发 chunk 加载 —— 首屏仍只加载激活工作区，后续 chunk 在空闲期预取（`requestIdleCallback` 预取可选）。
+- ErrorBoundary 无法捕获异步回调/事件处理器内的错误：关键 IPC 调用仍需各工作区自行 try/catch（现状已基本满足）。
