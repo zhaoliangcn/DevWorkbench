@@ -18,6 +18,9 @@ const preloadPath = path.resolve(__dirname, 'preload.js')
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
+  // 附录 D P3（窗口基础设施，占位未实施 —— 实施时再展开，勿提前改动运行时行为）：
+  // 1) 窗口尺寸/位置持久化：启动时从 userData 读上次 bounds 恢复，close 事件保存；
+  // 2) 自定义标题栏：titleBarStyle: 'hiddenInset' + 渲染层自绘拖拽区（top-nav 加 -webkit-app-region: drag）。
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
