@@ -205,7 +205,10 @@ export function SSHModule() {
       }
     })()
     return () => {
-      disconnect()
+      // Activity 保活（附录 D P1）：hidden 触发的 cleanup 执行时 activeWorkspace
+      // 已切走 —— 此情形不断开，保留后台 SSH 会话；仅当仍处于工具箱
+      // （真卸载，如错误边界重试）时才释放连接
+      if (useAppStore.getState().activeWorkspace === 'toolbox') disconnect()
     }
   }, [])
 

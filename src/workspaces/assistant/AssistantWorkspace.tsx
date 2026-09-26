@@ -5,6 +5,7 @@ import { useCrossStore } from '../../store/crossStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
 import { assistantAPI } from './utils/electron'
 import { buildPinnedContext } from './context-inject'
+import { useIsActive } from '../../shared/hooks/useIsActive'
 import { SessionHistory } from './SessionHistory'
 import './assistant.css'
 
@@ -57,6 +58,7 @@ export function AssistantWorkspace() {
   const skills = useAssistantStore((s) => s.skills)
   const activeSkill = useAssistantStore((s) => s.activeSkill)
   const startedRef = useRef(false)
+  const isActive = useIsActive('assistant')
   const logRef = useRef<HTMLDivElement>(null)
 
   // 首次进入工作区：刷新状态并按需启动
@@ -88,8 +90,10 @@ export function AssistantWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 事件订阅（assistant:events 广播）
+  // 事件订阅（assistant:events 广播）。Activity 保活（附录 D P1）：隐藏即暂停订阅，
+  // 重进工作区自动恢复；生成中的最终结果由 run() promise 完整回填，不依赖中间增量。
   useEffect(() => {
+    if (!isActive) return
     const off = assistantAPI.onEvent((raw) => {
       const e = raw as {
         kind?: string
@@ -144,7 +148,7 @@ export function AssistantWorkspace() {
     })
     return off
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isActive])
 
   // 捕获中心「喂给助手」（切片 C）：carry 到达时填入输入框并清槽。
   // 外部事件驱动的状态同步，set-state-in-effect 在此为误报。
