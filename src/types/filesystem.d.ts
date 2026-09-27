@@ -110,6 +110,141 @@ interface ElectronAPI {
       error?: string
     }>
   }
+  http: {
+    /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
+    request: (args: {
+      url: string
+      method?: string
+      headers?: Record<string, string>
+      body?: string
+      timeoutMs?: number
+    }) => Promise<{
+      success: boolean
+      status: number | null
+      statusText: string
+      headers: Record<string, string>
+      /** 文本为 utf8 原文；二进制为 base64（bodyIsBase64=true） */
+      body: string
+      bodyIsBase64: boolean
+      durationMs: number
+      error?: string
+    }>
+  }
+  webhook: {
+    /** 附录 F F.3：Webhook 接收器 */
+    list: () => Promise<{
+      listening: boolean
+      port: number | null
+      enabled: boolean
+      events: {
+        id: string
+        method: string
+        path: string
+        headers: Record<string, string>
+        body: string
+        receivedAt: number
+      }[]
+    }>
+    setEnabled: (enabled: boolean) => Promise<{
+      listening: boolean
+      port: number | null
+      enabled: boolean
+      error?: string
+    }>
+    clear: () => Promise<boolean>
+    /** 实时推送订阅；返回取消订阅函数 */
+    onReceived: (callback: (ev: {
+      id: string
+      method: string
+      path: string
+      headers: Record<string, string>
+      body: string
+      receivedAt: number
+    }) => void) => () => void
+  }
+  cron: {
+    /** 附录 F F.4b：Cron 触发调度器 */
+    getTasks: () => Promise<{
+      tasks: {
+        id: string
+        name: string
+        expr: string
+        target:
+          | { type: 'http'; url: string; method?: string; headers?: Record<string, string>; body?: string }
+          | { type: 'script'; command: string }
+          | { type: 'agent'; prompt: string }
+        enabled: boolean
+        lastRunAt?: number
+      }[]
+      logs: {
+        id: string
+        taskId: string
+        taskName: string
+        target: string
+        ok: boolean
+        detail: string
+        at: number
+      }[]
+    }>
+    setTasks: (tasks: unknown[]) => Promise<{ success: boolean; error?: string }>
+    trigger: (taskId: string) => Promise<{ success: boolean; error?: string }>
+    clearLogs: () => Promise<boolean>
+    /** 触发日志实时推送订阅；返回取消订阅函数 */
+    onLog: (callback: (entry: {
+      id: string
+      taskId: string
+      taskName: string
+      target: string
+      ok: boolean
+      detail: string
+      at: number
+    }) => void) => () => void
+  }
+  redis: {
+    /** 附录 F F.5：Redis 客户端 */
+    connect: (args: { id: string; host: string; port: number; password?: string; db?: number }) => Promise<{
+      success: boolean
+      version?: string
+      error?: string
+    }>
+    exec: (id: string, command: string) => Promise<{
+      success: boolean
+      value?: unknown
+      elapsedMs?: number
+      error?: string
+    }>
+    scan: (id: string, cursor: string, match: string, count: number) => Promise<{
+      success: boolean
+      cursor?: string
+      keys?: string[]
+      error?: string
+    }>
+    disconnect: (id: string) => Promise<{ success: boolean }>
+  }
+  sqlite: {
+    /** 附录 F F.6：SQLite 浏览器 */
+    check: () => Promise<{ available: boolean; error?: string }>
+    open: () => Promise<{ success: boolean; canceled?: boolean; filePath?: string; name?: string; error?: string }>
+    tables: () => Promise<{ success: boolean; tables?: { name: string; type: string }[]; error?: string }>
+    columns: (table: string) => Promise<{ success: boolean; columns?: { name: string; type: string; pk: boolean }[]; error?: string }>
+    rows: (table: string, where: string, page: number) => Promise<{
+      success: boolean
+      rows?: Record<string, unknown>[]
+      columns?: string[]
+      total?: number
+      page?: number
+      pageSize?: number
+      error?: string
+    }>
+    exec: (sql: string) => Promise<{
+      success: boolean
+      rows?: Record<string, unknown>[]
+      columns?: string[]
+      changes?: number
+      error?: string
+    }>
+    close: () => Promise<{ success: boolean }>
+  }
   data: {
     save: (key: string, data: unknown) => Promise<boolean>
     load: (key: string) => Promise<unknown>

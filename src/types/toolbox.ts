@@ -26,6 +26,25 @@ export interface CodeSnippet {
   usageCount?: number
 }
 
+export interface ApiEnvironment {
+  id: string
+  name: string
+  /** 变量字典：{{host}} / {{env.key}} 插值来源 */
+  variables: Record<string, string>
+  /** 单激活（同一时刻仅一个环境 active=true） */
+  active: boolean
+}
+
+export interface ApiAssertion {
+  id: string
+  type: 'status' | 'header' | 'bodyContains' | 'jsonPath' | 'timeMs'
+  op: 'eq' | 'gt' | 'lt' | 'contains' | 'matches'
+  /** status 为数字字符串；header 为 key=value；bodyContains 为文本；jsonPath 为 $.a.b 路径；timeMs 为数字上限 */
+  expected: string | number
+  /** jsonPath 断言的期望值（expected 存路径，值存这里） */
+  expectedValue?: string | number
+}
+
 export interface HttpRequest {
   id: string
   name?: string
@@ -38,6 +57,12 @@ export interface HttpRequest {
   duration?: number
   createdAt: number
   updatedAt?: number
+  /** 附录 F F.1：归属集合 */
+  collectionId?: string
+  /** 附录 F F.1：创建时绑定环境（发送时插值来源） */
+  environmentId?: string
+  /** 附录 F F.1：断言列表（响应后逐条校验） */
+  assertions: ApiAssertion[]
 }
 
 export interface EnvInfo {
