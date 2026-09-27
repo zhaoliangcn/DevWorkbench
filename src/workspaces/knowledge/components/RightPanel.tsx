@@ -8,8 +8,10 @@ import OutlinePanel from '../panels/OutlinePanel'
 import TrashPanel from '../panels/TrashPanel'
 import GraphView from '../panels/GraphView'
 import MindMapView from '../panels/MindMapView'
+import BoardView from '../panels/BoardView'
+import CalendarView from '../panels/CalendarView'
 import AiPanel from '../panels/AiPanel'
-import { Link2, Search, Tag, GitGraph, Sparkles, GitFork, List, Trash2 } from 'lucide-react'
+import { Link2, Search, Tag, GitGraph, Sparkles, GitFork, List, Trash2, SquareKanban, CalendarDays } from 'lucide-react'
 
 const MIN_WIDTH = 200
 const MAX_WIDTH = 800
@@ -22,6 +24,8 @@ const tabs: { id: RightPanelTab; label: string; icon: React.ReactNode }[] = [
   { id: 'outline', label: '大纲', icon: <List size={14} /> },
   { id: 'graph', label: '图谱', icon: <GitGraph size={14} /> },
   { id: 'mindmap', label: '导图', icon: <GitFork size={14} /> },
+  { id: 'board', label: '看板', icon: <SquareKanban size={14} /> },
+  { id: 'calendar', label: '日历', icon: <CalendarDays size={14} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={14} /> },
   { id: 'trash', label: '回收站', icon: <Trash2 size={14} /> },
 ]
@@ -90,6 +94,8 @@ export default function RightPanel() {
           {rightPanelTab === 'outline' && <OutlinePanel />}
           {rightPanelTab === 'graph' && <GraphView />}
           {rightPanelTab === 'mindmap' && <MindMapView />}
+          {rightPanelTab === 'board' && <BoardView />}
+          {rightPanelTab === 'calendar' && <CalendarView />}
           {rightPanelTab === 'ai' && <AiPanel />}
           {rightPanelTab === 'trash' && <TrashPanel />}
         </div>

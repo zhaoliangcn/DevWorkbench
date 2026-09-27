@@ -7,11 +7,13 @@ export interface Frontmatter {
   aliases: string[]
   /** frontmatter 中声明的 created（原样字符串，不做日期解析） */
   created: string | null
+  /** frontmatter 中声明的 status（附录 B.5.2 看板视图用，如 todo/doing/done） */
+  status: string | null
   /** 围栏闭合行之后的正文起始偏移；无 frontmatter 时为 0 */
   end: number
 }
 
-const EMPTY: Frontmatter = { tags: [], aliases: [], created: null, end: 0 }
+const EMPTY: Frontmatter = { tags: [], aliases: [], created: null, status: null, end: 0 }
 
 /** 去成对引号，再剥标签的前导 #（容错 tags: [#a]） */
 function cleanValue(raw: string): string {
@@ -53,7 +55,7 @@ export function parseFrontmatter(content: string): Frontmatter {
   }
   if (!bodyLines) return EMPTY // 围栏未闭合：不当作 frontmatter
 
-  const result: Frontmatter = { tags: [], aliases: [], created: null, end }
+  const result: Frontmatter = { tags: [], aliases: [], created: null, status: null, end }
   let currentListKey: 'tags' | 'aliases' | null = null
 
   for (const rawLine of bodyLines) {
@@ -81,10 +83,59 @@ export function parseFrontmatter(content: string): Frontmatter {
       }
     } else if (key === 'created') {
       result.created = cleanValue(value) || null
+    } else if (key === 'status') {
+      result.status = cleanValue(value) || null
     }
     // 其余键忽略
   }
   return result
+}
+
+/**
+ * 写回/删除 frontmatter 单键（附录 B.5.2 看板拖拽用）：纯函数不引库。
+ * - 无 frontmatter 且 value 非 null：在文件头生成围栏
+ * - 键已存在：原位替换（value 为 null 则整行删除）
+ * - 键不存在且 value 非 null：在闭合围栏前插入
+ * key 限 `[\w-]+`，value 强制单行（换行符替换为空格），防注入围栏。
+ */
+export function updateFrontmatterKey(content: string, key: string, value: string | null): string {
+  if (!/^[\w-]+$/.test(key)) return content
+  const cleanValueText = value === null ? null : value.replace(/[\r\n]+/g, ' ').trim()
+  const lines = content.split('\n')
+
+  if (lines[0].trim() !== '---') {
+    if (cleanValueText === null) return content
+    return ['---', `${key}: ${cleanValueText}`, '---', '', ...lines].join('\n')
+  }
+
+  // 找闭合围栏行
+  let closeIdx = -1
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '---') {
+      closeIdx = i
+      break
+    }
+  }
+  if (closeIdx < 0) return content // 围栏未闭合：不写回（与 parse 同规则）
+
+  const body = lines.slice(1, closeIdx)
+  const keyPattern = new RegExp(`^${key}\\s*:`)
+  let replaced = false
+  const nextBody: string[] = []
+  for (const line of body) {
+    if (keyPattern.test(line.trim())) {
+      replaced = true
+      if (cleanValueText !== null) nextBody.push(`${key}: ${cleanValueText}`)
+      // value null：删除该行（不入 nextBody）
+    } else {
+      nextBody.push(line)
+    }
+  }
+  if (!replaced && cleanValueText !== null) {
+    nextBody.push(`${key}: ${cleanValueText}`)
+  }
+
+  return ['---', ...nextBody, '---', ...lines.slice(closeIdx + 1)].join('\n')
 }
 
 /**
