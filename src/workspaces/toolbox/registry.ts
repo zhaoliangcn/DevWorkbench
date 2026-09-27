@@ -14,6 +14,7 @@ import { WebSocketTool } from './tools/WebSocketTool'
 import { MockServerTool } from './tools/MockServerTool'
 import { HttpModule } from './tools/HttpModule'
 import { SSHModule } from './tools/SSHModule'
+import { WebhookTool } from './tools/WebhookTool'
 import { IpTool } from './tools/IpTool'
 import { DatabaseTool } from './tools/DatabaseTool'
 import { TextProcessTool } from './tools/TextProcessTool'
@@ -22,6 +23,7 @@ import { FileHashTool } from './tools/FileHashTool'
 import { ProgrammerCalculatorTool } from './tools/ProgrammerCalculatorTool'
 import { LogViewerTool } from './tools/LogViewerTool'
 import { MirrorTool } from './tools/MirrorTool'
+import { CronTool } from './tools/CronTool'
 import { ImageTool } from './tools/ImageTool'
 import { SnippetsModule } from './tools/SnippetsModule'
 import { NotesModule } from './tools/NotesModule'
@@ -55,6 +57,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('mockserver', MockServerTool),
   defineToolboxModule('http', HttpModule),
   defineToolboxModule('ssh', SSHModule),
+  defineToolboxModule('webhook', WebhookTool),
   defineToolboxModule('ip', IpTool),
   defineToolboxModule('database', DatabaseTool),
   defineToolboxModule('textprocess', TextProcessTool),
@@ -63,6 +66,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('calculator', ProgrammerCalculatorTool),
   defineToolboxModule('logviewer', LogViewerTool),
   defineToolboxModule('mirror', MirrorTool),
+  defineToolboxModule('cron', CronTool),
   defineToolboxModule('imagetool', ImageTool),
   defineToolboxModule('snippets', SnippetsModule),
   defineToolboxModule('notes', NotesModule),

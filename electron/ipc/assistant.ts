@@ -394,4 +394,15 @@ async function stopAssistant() {
   }
 }
 
+/** 附录 F F.4c：Cron 调度器直触 Agent 任务（绕过 IPC，复用 app.run 上下文与工具授权） */
+export async function runAgentTask(prompt: string): Promise<{ ok: boolean; detail: string }> {
+  if (!app) return { ok: false, detail: '助手未启动（需在 AI 助手页启动并配置模型）' }
+  try {
+    const r = await app.run(prompt)
+    return r.success ? { ok: true, detail: r.message } : { ok: false, detail: r.message || 'Agent 任务执行失败' }
+  } catch (e) {
+    return { ok: false, detail: errMessage(e) }
+  }
+}
+
 export { registerAssistantIpc, stopAssistant }
