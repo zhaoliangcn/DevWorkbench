@@ -27,6 +27,8 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: 'DevWorkbench',
+    // 应用图标：macOS 用 icns，Windows 用 ico（打包时由 electron-builder 处理）
+    icon: path.resolve(__dirname, '..', 'icons', process.platform === 'darwin' ? 'devworkbench.icns' : 'devworkbench.ico'),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
