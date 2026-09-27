@@ -161,6 +161,13 @@ export interface ElectronAPIAdapter {
     error?: string
   }>
   sqliteClose: () => Promise<{ success: boolean }>
+
+  /** 附录 B.6.1：Docker 管理面板 */
+  dockerCheck: () => Promise<{ available: boolean; version?: string; error?: string }>
+  dockerContainers: () => Promise<{ success: boolean; raw: string; error?: string }>
+  dockerImages: () => Promise<{ success: boolean; raw: string; error?: string }>
+  dockerLogs: (id: string, tail?: number) => Promise<{ success: boolean; logs: string; error?: string }>
+  dockerAction: (action: string, id: string) => Promise<{ success: boolean; error?: string }>
 }
 
 // 默认 mock 实现，用于纯 Web 环境
@@ -260,6 +267,12 @@ const mockAPI: ElectronAPIAdapter = {
   sqliteRows: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SQLite' }),
   sqliteExec: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SQLite' }),
   sqliteClose: () => Promise.resolve({ success: true }),
+
+  dockerCheck: () => Promise.resolve({ available: false, error: 'Web 环境不支持 Docker' }),
+  dockerContainers: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持 Docker' }),
+  dockerImages: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持 Docker' }),
+  dockerLogs: () => Promise.resolve({ success: false, logs: '', error: 'Web 环境不支持 Docker' }),
+  dockerAction: () => Promise.resolve({ success: false, error: 'Web 环境不支持 Docker' }),
 }
 
 function createElectronAPI(): ElectronAPIAdapter {
@@ -314,6 +327,12 @@ function createElectronAPI(): ElectronAPIAdapter {
     sqliteRows: (table, where, page) => bridge.sqlite.rows(table, where, page),
     sqliteExec: (sql) => bridge.sqlite.exec(sql),
     sqliteClose: () => bridge.sqlite.close(),
+
+    dockerCheck: () => bridge.docker.check(),
+    dockerContainers: () => bridge.docker.containers(),
+    dockerImages: () => bridge.docker.images(),
+    dockerLogs: (id, tail) => bridge.docker.logs(id, tail),
+    dockerAction: (action, id) => bridge.docker.action(action, id),
   }
 }
 

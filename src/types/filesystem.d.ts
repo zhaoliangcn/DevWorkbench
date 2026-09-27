@@ -110,6 +110,14 @@ interface ElectronAPI {
       error?: string
     }>
   }
+  docker: {
+    /** 附录 B.6.1：Docker 管理面板 */
+    check: () => Promise<{ available: boolean; version?: string; error?: string }>
+    containers: () => Promise<{ success: boolean; raw: string; error?: string }>
+    images: () => Promise<{ success: boolean; raw: string; error?: string }>
+    logs: (id: string, tail?: number) => Promise<{ success: boolean; logs: string; error?: string }>
+    action: (action: string, id: string) => Promise<{ success: boolean; error?: string }>
+  }
   http: {
     /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
     request: (args: {

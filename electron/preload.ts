@@ -70,6 +70,14 @@ const api = {
     killProcess: (pid: number) => ipcRenderer.invoke('system:killProcess', pid),
     checkMirror: (url: string) => ipcRenderer.invoke('system:checkMirror', url),
   },
+  docker: {
+    /** 附录 B.6.1：Docker 管理面板（docker CLI 封装，通道薄返回原始输出） */
+    check: () => ipcRenderer.invoke('docker:check'),
+    containers: () => ipcRenderer.invoke('docker:containers'),
+    images: () => ipcRenderer.invoke('docker:images'),
+    logs: (id: string, tail?: number) => ipcRenderer.invoke('docker:logs', id, tail),
+    action: (action: string, id: string) => ipcRenderer.invoke('docker:action', action, id),
+  },
   http: {
     /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
     request: (args: { url: string; method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }) =>

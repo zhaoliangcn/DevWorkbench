@@ -29,6 +29,7 @@ export const TOOLBOX_MODULES: ToolboxModule[] = [
   { id: 'formatconverter', name: '格式互转', icon: '🔄', category: 'file' },
   { id: 'filehash', name: '文件哈希', icon: '#️⃣', category: 'file' },
   { id: 'system', name: '系统检测', icon: '🔍', category: 'system' },
+  { id: 'docker', name: 'Docker 面板', icon: '🐳', category: 'system' },
   { id: 'password', name: '密码生成', icon: '🔑', category: 'system' },
   { id: 'calculator', name: '计算器', icon: '🧮', category: 'system' },
   { id: 'logviewer', name: '日志查看', icon: '📋', category: 'system' },

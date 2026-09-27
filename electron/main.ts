@@ -13,6 +13,7 @@ import { registerCronIpc, stopCronScheduler } from './ipc/cron.js'
 import { registerRedisIpc, stopRedisAll } from './ipc/redis.js'
 import { registerSqliteIpc, stopSqlite } from './ipc/sqlite.js'
 import { registerAssistantIpc, stopAssistant } from './ipc/assistant.js'
+import { registerDockerIpc } from './ipc/docker.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -75,6 +76,8 @@ app.whenReady().then(async () => {
   registerSqliteIpc()
   // Phase 6: AI 助手（assistant:* 命名空间）
   registerAssistantIpc()
+  // 附录 B.6.1: Docker 管理面板（docker:* 命名空间）
+  registerDockerIpc()
 
   createWindow()
 
