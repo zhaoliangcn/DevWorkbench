@@ -53,6 +53,8 @@ export interface ElectronAPIAdapter {
   scanPort: (host: string, port: number) => Promise<boolean>
   getLocalIps: () => Promise<string[]>
   killProcess: (pid: number) => Promise<boolean>
+  /** 附录 B.6.2：进程监视器 */
+  listProcesses: () => Promise<{ success: boolean; raw: string; kind: string; error?: string }>
   saveData: (key: string, data: unknown) => Promise<boolean>
   loadData: (key: string) => Promise<unknown>
   deleteData: (key: string) => Promise<boolean>
@@ -178,6 +180,7 @@ const mockAPI: ElectronAPIAdapter = {
   scanPort: () => Promise.resolve(false),
   getLocalIps: () => Promise.resolve([]),
   killProcess: () => Promise.resolve(false),
+  listProcesses: () => Promise.resolve({ success: false, raw: '', kind: '', error: 'Web 环境不支持进程监视' }),
   saveData: () => Promise.resolve(true),
   loadData: () => Promise.resolve(null),
   deleteData: () => Promise.resolve(true),
@@ -286,6 +289,7 @@ function createElectronAPI(): ElectronAPIAdapter {
     scanPort: (host, port) => bridge.system.checkPort(port, host),
     getLocalIps: () => bridge.system.getLocalIps(),
     killProcess: (pid) => bridge.system.killProcess(pid),
+    listProcesses: () => bridge.system.listProcesses(),
     saveData: (key, data) => bridge.data.save(key, data),
     loadData: (key) => bridge.data.load(key),
     deleteData: (key) => bridge.data.delete(key),

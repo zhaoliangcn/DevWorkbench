@@ -107,6 +107,27 @@ function registerSystemIpc() {
     return ips
   })
 
+  // 附录 B.6.2：进程监视器（通道薄返回原始 CLI 输出，解析在 renderer pure 层）
+  ipcMain.handle('system:listProcesses', async () => {
+    try {
+      if (process.platform === 'win32') {
+        const { stdout } = await execAsync('tasklist /FO CSV /NH', {
+          timeout: 10_000,
+          maxBuffer: 8 * 1024 * 1024,
+        })
+        return { success: true, raw: stdout, kind: 'win' }
+      }
+      // 等号形式去表头；comm 可能含空格，renderer 按「前三个数字 + 剩余整体」切分
+      const { stdout } = await execAsync('ps -axo pid=,pcpu=,pmem=,comm=', {
+        timeout: 10_000,
+        maxBuffer: 8 * 1024 * 1024,
+      })
+      return { success: true, raw: stdout, kind: 'unix' }
+    } catch (err) {
+      return { success: false, raw: '', kind: '', error: (err as Error).message }
+    }
+  })
+
   ipcMain.handle('system:killProcess', async (_event, pid: number) => {
     try {
       if (process.platform === 'win32') {

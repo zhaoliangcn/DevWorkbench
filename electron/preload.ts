@@ -69,6 +69,7 @@ const api = {
     getLocalIps: () => ipcRenderer.invoke('system:getLocalIps'),
     killProcess: (pid: number) => ipcRenderer.invoke('system:killProcess', pid),
     checkMirror: (url: string) => ipcRenderer.invoke('system:checkMirror', url),
+    listProcesses: () => ipcRenderer.invoke('system:listProcesses'),
   },
   docker: {
     /** 附录 B.6.1：Docker 管理面板（docker CLI 封装，通道薄返回原始输出） */

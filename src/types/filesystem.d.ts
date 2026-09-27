@@ -102,6 +102,7 @@ interface ElectronAPI {
     }
     getLocalIps: () => Promise<string[]>
     killProcess: (pid: number) => Promise<boolean>
+    listProcesses: () => Promise<{ success: boolean; raw: string; kind: string; error?: string }>
     checkMirror: (url: string) => Promise<{
       url: string
       available: boolean
