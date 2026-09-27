@@ -1231,3 +1231,134 @@ const handleSend = async () => {
 - **唯一写入口**：新落盘路径一律走 filesystem.ts 封装；新 IPC（附件/模板/回收站）必须复用 vault 内路径校验，防穿越。
 - **解析器纯函数下沉** utils/ + vitest 覆盖：标签/别名/frontmatter 解析是正则回溯与空串死循环的高发区（沿用既有教训）。
 - **起步顺序**：E.1 → E.2（E.2 顺路清掉 P2 遗留的 CommandPalette 动作源）；E.6 数据安全不宜晚于形成外部编辑习惯。
+
+---
+
+## 附录 F：数据/服务层补齐设计（工具箱网络分类缺口）
+
+> 2026-09-27。目标：把附录 B.4 列出的 4 个网络分类功能（API 集合+环境变量、Webhook 接收器、Cron 可视化、Redis/SQLite 客户端）落到具体文件、函数与切片，使工具箱网络分类从「半成品」升级为「服务化」。
+
+### F.1 现状盘点
+
+| 项 | 现状 | 位置 |
+|----|------|------|
+| 工具箱模块注册表 | 6 个 network 工具（ip/http/websocket/mockserver/database/ssh）+ devtools/file/system | `src/shared/constants.ts` |
+| 接口调试 | 单请求编辑 + 50 条历史（写死 `default` 集合），fetch 走 renderer（受 CORS 限制） | `tools/HttpModule.tsx` |
+| 数据类型 | `HttpRequest` 缺 `collectionId`/`environmentId`/`assertions`；`ApiEnvironment`/`ApiCollection` 不存在 | `types/toolbox.ts` |
+| 存储 | `electronAPI.saveData('requests')` 写死 `collections: [{ id:'default' }]`，多集合形同虚设 | `HttpModule.tsx` L19、L85 |
+| Express | 仅 `system:checkMirror` 1 端点（3000 端口），无 webhook/cron 路由 | `electron/ipc/system.ts` |
+| DatabaseTool | SQL 查询（PostgreSQL/MySQL），无 Redis/SQLite | `tools/DatabaseTool.tsx` |
+| Scheduler | C.3 已埋设 `agent-tasks` 定时任务开关，UI 未显性化 | `electron/ipc/assistant.ts` |
+
+结论：网络分类的「集合」是壳（类型已定义、存储写死 default）；「数据服务」全缺（webhook/cron）；「数据库」只覆盖 SQL 一半。
+
+### F.2 功能切片
+
+#### F.2.1 环境变量插值 + API 集合（P0，Postman-lite 核心）
+
+- **类型扩展**（[types/toolbox.ts](file:///Users/macmima1234/code/devworkbench/src/types/toolbox.ts)）：
+  - `ApiEnvironment { id, name, variables: Record<string,string>, active: boolean }`
+  - `ApiAssertion { id, type: 'status'|'header'|'bodyContains'|'jsonPath'|'timeMs', op, expected }`
+  - `HttpRequest` 加 `collectionId?: string; environmentId?: string; assertions: ApiAssertion[]`
+  - `ApiCollection` 复用既有 `RequestCollection`（改名统一）
+- **插值引擎**（纯函数，`src/workspaces/toolbox/utils/env-interpolate.ts`）：
+  - `interpolateVariables(text, env): { result, missing: string[] }`
+  - 单值 `{{key}}` + 一层嵌套 `{{env.key}}`，未知变量原样保留并收集到 `missing[]`
+  - vitest 覆盖：未知变量、嵌套字典、空白 trim、`$` 不误判
+- **HttpModule 改造**（不重写，扩 tab）：
+  - 新增「环境变量」tab：选环境 + 显示缺失变量
+  - 请求发送前调用 `interpolateVariables` 处理 url/headers/body
+  - 集合侧栏：flat history → 集合树（collection → request），新建/重命名/删除
+  - 断言区：4 种断言 + 响应后绿/红标
+  - 存储键 `api`（`{ collections, environments }`），不再写死 `default`
+
+#### F.2.2 fetch 下沉主进程（P0，CORS 友好）
+
+- 新增 IPC `http:request`（`electron/ipc/http.ts`）：
+  - 入参 `{ url, method, headers, body }`，返回 `{ status, headers, body: string (base64 for binary), durationMs }`
+  - 主进程用 `undici`（已依赖）发起，绕开 renderer CORS
+  - 二进制响应（image/zip 等）base64 回传，由 renderer 解码
+- `HttpModule` 的 `fetch(url, config)` 替换为 `electronAPI.httpRequest(...)`
+- **验收**：跨域 `https://httpbin.org/post` 可正常返回（renderer fetch 会因 CORS 失败）
+
+#### F.2.3 Webhook 接收器（P1，Express 挂载）
+
+- **主进程**（`electron/ipc/webhook.ts`，实施修订：不复用 Express —— API Server 是可选功能，挂载其上会随开关失效，改为独立 `node:http` server）：
+  - 默认监听 `127.0.0.1:9090`，`EADDRINUSE` 自增重试（最多 10 次）
+  - `createWebhookHandler` 纯函数（isEnabled/onEvent/bodyLimit 参数化，vitest 可直测）
+  - CORS 全开（`Access-Control-Allow-Origin: *` + `methods: ALL`）
+  - 环形 buffer 100 条（`ringPush` 不持久化，防 OOM）
+  - body 上限 1MB（超限 413）
+  - `webhook:received` 推给 renderer（仅窗口活跃时）
+- **Renderer**（`tools/WebhookTool.tsx`）：
+  - `useEffect` 订阅 `webhook:received`，UI 顶部「当前监听地址」+「最近请求列表」
+  - 「一键存为笔记」按钮（联动附录 C.2 工具箱→知识库链路）
+  - 「启动/停止监听」开关（enabled 标志：关闭时 404，而非路由热卸载）
+- **端口冲突**：9090 被占则自增到 9091/9092...
+
+#### F.2.4 通用 Cron 可视化（P1，复用 scheduler）
+
+- **Cron 解析**（实施修订：规范实现在 `electron/ipc/cron-core.ts`，渲染层 `src/workspaces/toolbox/utils/cron.ts` re-export —— 主进程 scheduler 与渲染层共用单一事实源；受 tsconfig.electron rootDir 约束，electron 代码不能反向 import src/；纯函数不引库）：
+  - `parseCron(expr): CronRule`（5 字段：分/时/日/月/周）
+  - `nextRun(cronRule, from: Date, count: number): Date[]`
+  - vitest 覆盖：`*/15`、`0 9 * * 1-5`、月/周组合、非法表达式拒绝
+- **UI**（新增 `tools/CronTool.tsx`，`category: 'system'`）：
+  - 表达式输入框 + 5 字段滑块
+  - 最近 10 次触发时间预览
+  - 触发目标三选一：HTTP 请求（选已保存请求）/ 本地脚本（`shell:exec`，需 confirm）/ Agent 任务（挂 scheduler）
+  - 触发日志写 `agent-task-log`，与 B.3「定时任务看板」同源
+- **切片拆**：
+  - F.4a：解析 + UI 滑块（纯前端，独立交付）
+  - F.4b：HTTP/脚本触发（主进程 IPC + 日志）
+  - F.4c：Agent 任务触发（复用 scheduler，与 B.3 看板打通）
+
+#### F.2.5 Redis 客户端（P2）
+
+- **技术**：`ioredis`（纯 JS 轻量），主进程 `redis:connect/exec` IPC
+- **DatabaseTool 扩 tab**：
+  - 连接表单：host/port/auth/db
+  - 命令输入：`GET/SET/HGETALL/LRANGE/SCAN...`
+  - 键空间树：`SCAN 0 MATCH {prefix}* COUNT 100` 增量遍历，按 prefix 分组
+  - 值查看：TTL 自动显示（`TTL` 命令）
+- **类型**：`RedisConnection { id, name, host, port, password?, db? }`
+- **数据**：`electronAPI.saveData('redis')` 存连接列表（不存密码，仅引用名）
+
+#### F.2.6 SQLite 浏览器（P2）
+
+- **技术**：`better-sqlite3`（同步 API，主进程跑；native 模块放 `optionalDependencies`，首次打开才动态 import）
+- **DatabaseTool 扩 tab**：
+  - 文件选择（`dialog:openFile` 走 electronAPI）
+  - 表列表 + 字段（`PRAGMA table_info`）
+  - 数据浏览器：分页 LIMIT 200/页，`WHERE` 过滤
+  - SQL 控制台（读写）
+- **类型**：`SqliteDatabase { id, name, filePath }`（仅记录路径，不拷贝文件）
+
+### F.3 实施顺序与验收
+
+| 阶段 | 内容 | 验收 |
+|------|------|------|
+| F.1 | 环境变量插值 + API 集合 | 选环境 `{{host}}` 自动替换 URL/Headers/Body；多集合树可管理；断言通过/失败视觉区分 |
+| F.2 | fetch 下沉 | 跨域请求正常返回；二进制响应 base64 解码；CORS 不再阻断 |
+| F.3 | Webhook 接收器 | `curl http://localhost:3000/webhook/anything` 列表即时刷新；一键存笔记 |
+| F.4 | Cron 可视化 | 表达式输入出 10 次触发预览；HTTP/脚本/Agent 三种触发目标可选 |
+| F.5 | Redis 客户端 | 连接 + 命令 + 键空间树；TTL 显示 |
+| F.6 | SQLite 浏览器 | 文件打开 + 表浏览 + WHERE 过滤 + SQL 控制台 |
+
+**建议执行序**：F.1 → F.2（Postman-lite 最小闭环）→ F.3 → F.4 → F.5 → F.6。
+
+### F.4 关键工程决策
+
+1. **数据归属**：API 集合/环境/Webhook buffer 不进 vault（私有数据），用 `saveData` 单独存储键（`api`/`webhook-log`/`redis`/`sqlite`），避免污染知识库双写契约。
+2. **Webhook 独立 server**：不复用 Express（API Server 可选启用，挂载会随之失效）；独立 `node:http` 默认 9090，EADDRINUSE 自增；镜像检测仍走原 Express。
+3. **Cron 不引库**：5 字段手写解析 + 纯函数 `nextRun`（vitest 单测），与知识库 utils/ 下沉策略一致。
+4. **SQLite 可选依赖**：`better-sqlite3` 放 `optionalDependencies`，首次打开动态 import，失败降级为「未安装」提示。
+5. **fetch 下沉**：renderer `fetch` 替换为 `electronAPI.httpRequest`，主进程 `undici`，二进制响应 base64 回传。
+6. **Webhook 环形 buffer**：仅内存 100 条，不持久化（避免磁盘契约复杂度）。
+
+### F.5 风险与对策
+
+- **native 模块打包体积**（better-sqlite3）→ optional 依赖，动态 import，失败降级
+- **端口 3000 冲突** → `isPortInUse` 探测 + 自增
+- **`{{var}}` 嵌套爆炸** → 仅支持一层 `{{env.key}}`，不递归
+- **Cron 脚本执行安全** → 触发「本地脚本」需 confirm（对齐 C.4 审批墙）
+- **大文件 SQLite 卡 UI** → 分页 LIMIT 200/页，仅索引不物化
