@@ -39,6 +39,7 @@ export type RightPanelTab =
   | 'board'
   | 'calendar'
   | 'review'
+  | 'whiteboard'
   | 'ai'
   | 'trash'
 export type EditorMode = 'edit' | 'preview' | 'split'

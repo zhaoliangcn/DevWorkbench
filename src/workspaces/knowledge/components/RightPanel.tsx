@@ -11,8 +11,9 @@ import MindMapView from '../panels/MindMapView'
 import BoardView from '../panels/BoardView'
 import CalendarView from '../panels/CalendarView'
 import ReviewPanel from '../panels/ReviewPanel'
+import Whiteboard from '../panels/Whiteboard'
 import AiPanel from '../panels/AiPanel'
-import { Link2, Search, Tag, GitGraph, Sparkles, GitFork, List, Trash2, SquareKanban, CalendarDays, Brain } from 'lucide-react'
+import { Link2, Search, Tag, GitGraph, Sparkles, GitFork, List, Trash2, SquareKanban, CalendarDays, Brain, PenTool } from 'lucide-react'
 
 const MIN_WIDTH = 200
 const MAX_WIDTH = 800
@@ -28,6 +29,7 @@ const tabs: { id: RightPanelTab; label: string; icon: React.ReactNode }[] = [
   { id: 'board', label: '看板', icon: <SquareKanban size={14} /> },
   { id: 'calendar', label: '日历', icon: <CalendarDays size={14} /> },
   { id: 'review', label: '复习', icon: <Brain size={14} /> },
+  { id: 'whiteboard', label: '白板', icon: <PenTool size={14} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={14} /> },
   { id: 'trash', label: '回收站', icon: <Trash2 size={14} /> },
 ]
@@ -37,6 +39,7 @@ export default function RightPanel() {
   const setRightPanelTab = useStore((s) => s.setRightPanelTab)
   const rightPanelWidth = useStore((s) => s.rightPanelWidth)
   const setRightPanelWidth = useStore((s) => s.setRightPanelWidth)
+  const activeNoteId = useStore((s) => s.activeNoteId)
 
   const isResizing = useRef(false)
   const startX = useRef(0)
@@ -99,6 +102,7 @@ export default function RightPanel() {
           {rightPanelTab === 'board' && <BoardView />}
           {rightPanelTab === 'calendar' && <CalendarView />}
           {rightPanelTab === 'review' && <ReviewPanel />}
+          {rightPanelTab === 'whiteboard' && <Whiteboard key={activeNoteId ?? 'none'} />}
           {rightPanelTab === 'ai' && <AiPanel />}
           {rightPanelTab === 'trash' && <TrashPanel />}
         </div>
