@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { RedisPanel } from './RedisPanel'
+import { SqlitePanel } from './SqlitePanel'
 
 interface DBConnection {
   id: string
@@ -11,7 +13,9 @@ interface DBConnection {
   password: string
 }
 
+/** 附录 F F.5/F.6：DatabaseTool 扩 tab —— Redis / SQLite（真实）+ 其他 SQL（Phase 4 模拟） */
 export function DatabaseTool() {
+  const [tab, setTab] = useState<'redis' | 'sqlite' | 'sql'>('redis')
   const [connections, setConnections] = useState<DBConnection[]>([])
   const [activeConnection, setActiveConnection] = useState<DBConnection | null>(null)
   const [connected, setConnected] = useState(false)
@@ -101,6 +105,14 @@ export function DatabaseTool() {
       <div className="tool-header">
         <h3>数据库工具</h3>
       </div>
+      <div className="api-tabs">
+        <button className={`api-tab${tab === 'redis' ? ' active' : ''}`} onClick={() => setTab('redis')}>Redis</button>
+        <button className={`api-tab${tab === 'sqlite' ? ' active' : ''}`} onClick={() => setTab('sqlite')}>SQLite</button>
+        <button className={`api-tab${tab === 'sql' ? ' active' : ''}`} onClick={() => setTab('sql')}>其他 SQL</button>
+      </div>
+      {tab === 'redis' && <RedisPanel />}
+      {tab === 'sqlite' && <SqlitePanel />}
+      {tab === 'sql' && (
       <div className="tool-body">
         <div className="tool-section">
           <div className="section-header">
@@ -237,6 +249,7 @@ export function DatabaseTool() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
