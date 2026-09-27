@@ -14,6 +14,7 @@ import { registerRedisIpc, stopRedisAll } from './ipc/redis.js'
 import { registerSqliteIpc, stopSqlite } from './ipc/sqlite.js'
 import { registerAssistantIpc, stopAssistant } from './ipc/assistant.js'
 import { registerDockerIpc } from './ipc/docker.js'
+import { registerEnvfileIpc } from './ipc/envfile.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -78,6 +79,8 @@ app.whenReady().then(async () => {
   registerAssistantIpc()
   // 附录 B.6.1: Docker 管理面板（docker:* 命名空间）
   registerDockerIpc()
+  // 附录 B.6.3: .env 管理器（envfile:* 命名空间）
+  registerEnvfileIpc()
 
   createWindow()
 

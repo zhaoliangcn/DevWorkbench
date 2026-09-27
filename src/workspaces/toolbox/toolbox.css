@@ -2529,3 +2529,147 @@
   color: var(--error-color, #f87171);
   border-color: color-mix(in srgb, var(--error-color, #f87171) 55%, transparent);
 }
+
+/* ---------- 附录 B.6.3：.env 管理器 ---------- */
+
+.tb-root .envman-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tb-root .envman-meta {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .envman-error {
+  color: var(--error-color, #f87171);
+  font-size: 12px;
+  margin: 6px 0;
+}
+
+.tb-root .envman-table {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tb-root .envman-row {
+  display: grid;
+  grid-template-columns: var(--envman-cols, minmax(140px, 1.2fr) repeat(2, minmax(100px, 1fr)));
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.tb-root .envman-row.envman-head {
+  border-style: dashed;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .envman-row.warn {
+  border-color: #f0b429;
+}
+
+.tb-root .envman-row > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .envman-key {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.tb-root .envman-filehead {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.tb-root .envman-filehead button {
+  display: inline-flex;
+  padding: 1px 3px;
+}
+
+.tb-root .envman-missbadge {
+  font-style: normal;
+  font-size: 10px;
+  color: #f0b429;
+  border: 1px solid #f0b429;
+  border-radius: 8px;
+  padding: 0 5px;
+}
+
+.tb-root .envman-value {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .envman-missing {
+  color: var(--error-color, #f87171);
+  font-size: 11px;
+}
+
+.tb-root .envman-generators {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tb-root .envman-generators button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.tb-root .envman-snippet {
+  margin-top: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tb-root .envman-snippet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--bg-secondary, rgba(128, 128, 128, 0.08));
+}
+
+.tb-root .envman-snippet-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tb-root .envman-snippet-actions button {
+  display: inline-flex;
+  padding: 2px 5px;
+}
+
+.tb-root .envman-snippet-body {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 260px;
+  overflow: auto;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  white-space: pre;
+}

@@ -119,6 +119,15 @@ interface ElectronAPI {
     logs: (id: string, tail?: number) => Promise<{ success: boolean; logs: string; error?: string }>
     action: (action: string, id: string) => Promise<{ success: boolean; error?: string }>
   }
+  envfile: {
+    /** 附录 B.6.3：.env 管理器 */
+    pick: () => Promise<{
+      success: boolean
+      canceled: boolean
+      files: { path: string; name: string }[]
+    }>
+    read: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
+  }
   http: {
     /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
     request: (args: {

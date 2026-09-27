@@ -170,6 +170,14 @@ export interface ElectronAPIAdapter {
   dockerImages: () => Promise<{ success: boolean; raw: string; error?: string }>
   dockerLogs: (id: string, tail?: number) => Promise<{ success: boolean; logs: string; error?: string }>
   dockerAction: (action: string, id: string) => Promise<{ success: boolean; error?: string }>
+
+  /** 附录 B.6.3：.env 管理器 */
+  envPickFiles: () => Promise<{
+    success: boolean
+    canceled: boolean
+    files: { path: string; name: string }[]
+  }>
+  envReadFile: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
 }
 
 // 默认 mock 实现，用于纯 Web 环境
@@ -276,6 +284,9 @@ const mockAPI: ElectronAPIAdapter = {
   dockerImages: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持 Docker' }),
   dockerLogs: () => Promise.resolve({ success: false, logs: '', error: 'Web 环境不支持 Docker' }),
   dockerAction: () => Promise.resolve({ success: false, error: 'Web 环境不支持 Docker' }),
+
+  envPickFiles: () => Promise.resolve({ success: false, canceled: true, files: [] }),
+  envReadFile: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持文件读取' }),
 }
 
 function createElectronAPI(): ElectronAPIAdapter {
@@ -337,6 +348,9 @@ function createElectronAPI(): ElectronAPIAdapter {
     dockerImages: () => bridge.docker.images(),
     dockerLogs: (id, tail) => bridge.docker.logs(id, tail),
     dockerAction: (action, id) => bridge.docker.action(action, id),
+
+    envPickFiles: () => bridge.envfile.pick(),
+    envReadFile: (filePath) => bridge.envfile.read(filePath),
   }
 }
 

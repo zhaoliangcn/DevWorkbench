@@ -28,6 +28,7 @@ export const TOOLBOX_MODULES: ToolboxModule[] = [
   { id: 'textprocess', name: '文本处理', icon: '📄', category: 'file' },
   { id: 'formatconverter', name: '格式互转', icon: '🔄', category: 'file' },
   { id: 'filehash', name: '文件哈希', icon: '#️⃣', category: 'file' },
+  { id: 'envman', name: '.env 管理', icon: '🧾', category: 'file' },
   { id: 'system', name: '系统检测', icon: '🔍', category: 'system' },
   { id: 'docker', name: 'Docker 面板', icon: '🐳', category: 'system' },
   { id: 'procmon', name: '进程监视', icon: '📟', category: 'system' },

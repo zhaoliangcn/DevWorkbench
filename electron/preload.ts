@@ -79,6 +79,11 @@ const api = {
     logs: (id: string, tail?: number) => ipcRenderer.invoke('docker:logs', id, tail),
     action: (action: string, id: string) => ipcRenderer.invoke('docker:action', action, id),
   },
+  envfile: {
+    /** 附录 B.6.3：.env 管理器（多选对话框 + 任意路径文本读取） */
+    pick: () => ipcRenderer.invoke('envfile:pick'),
+    read: (filePath: string) => ipcRenderer.invoke('envfile:read', filePath),
+  },
   http: {
     /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
     request: (args: { url: string; method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }) =>
