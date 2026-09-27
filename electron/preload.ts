@@ -159,6 +159,7 @@ const api = {
     historyList: () => ipcRenderer.invoke('assistant:history:list'),
     historyRead: (file: string) => ipcRenderer.invoke('assistant:history:read', file),
     historyDelete: (file: string) => ipcRenderer.invoke('assistant:history:delete', file),
+    historySearch: (query: string) => ipcRenderer.invoke('assistant:history:search', query),
     // 技能预设进阶（切片 H.2）
     toolsList: () => ipcRenderer.invoke('assistant:tools:list'),
     setToolFilter: (names: string[] | null) => ipcRenderer.invoke('assistant:setToolFilter', names),

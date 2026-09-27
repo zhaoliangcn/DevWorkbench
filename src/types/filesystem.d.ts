@@ -282,6 +282,11 @@ interface ElectronAPI {
     }>
     historyRead: (file: string) => Promise<{ success: boolean; error?: string; events: AssistantHistoryEvent[] }>
     historyDelete: (file: string) => Promise<{ success: boolean; error?: string }>
+    historySearch: (query: string) => Promise<{
+      success: boolean
+      error?: string
+      results: { sessionId: string; file: string; mtimeMs: number; hits: { timestamp: string; type: string; snippet: string }[] }[]
+    }>
     /** 技能预设进阶（切片 H.2）：工具清单与运行时工具子集 */
     toolsList: () => Promise<{ success: boolean; error?: string; names: string[] }>
     setToolFilter: (names: string[] | null) => Promise<{ success: boolean; error?: string }>

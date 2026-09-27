@@ -1,8 +1,9 @@
 // 会话历史浮层（切片 F，C.8 dsh 借鉴：Trajectory append-only 事件流查看）。
 // 数据来自主进程 assistant:history:*（dev-assistant-ts SessionStore 静态 API）。
 import { useState, useEffect, useCallback } from 'react'
-import { X, RefreshCw, Trash2, FileText } from 'lucide-react'
+import { X, RefreshCw, Trash2, FileText, Search } from 'lucide-react'
 import { assistantAPI } from './utils/electron'
+import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
 
 interface HistorySession {
   sessionId: string
@@ -87,6 +88,12 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [events, setEvents] = useState<AssistantHistoryEvent[]>([])
   const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<
+    { sessionId: string; file: string; mtimeMs: number; hits: { timestamp: string; type: string; snippet: string }[] }[] | null
+  >(null)
+  const [branching, setBranching] = useState(false)
 
   const loadList = useCallback(async () => {
     const res = await assistantAPI.historyList()
@@ -111,6 +118,48 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
     }
     setActiveFile(file)
     setEvents(res.events)
+  }
+
+  // B.3.4 跨会话检索
+  const doSearch = async () => {
+    if (!query.trim()) {
+      setSearchResults(null)
+      return
+    }
+    setSearching(true)
+    setError('')
+    const res = await assistantAPI.historySearch(query.trim())
+    setSearching(false)
+    if (!res.success) {
+      setError(res.error ?? '检索失败')
+      return
+    }
+    setSearchResults(res.results)
+  }
+
+  // B.3.4 按笔记分支：会话轨迹 → vault 笔记；pin 后经 E.7 pinnedNotes 注入新会话，形成分支上下文
+  const branchToNote = async () => {
+    if (!activeFile) return
+    setBranching(true)
+    const session = sessions.find((s) => s.file === activeFile)
+    const title = `会话分支 ${sessionLabel(session?.sessionId ?? activeFile)}`
+    const lines: string[] = [`# ${title}`, '', '> 由会话历史「分支为笔记」生成；固定（pin）后可作为新会话上下文。', '']
+    let userCount = 0
+    let toolCount = 0
+    for (const ev of events) {
+      if (ev.type === 'user_message') {
+        userCount += 1
+        lines.push(`## 用户 ${formatTime(ev.timestamp)}`, '', (ev.content ?? '').slice(0, 2000), '')
+      } else if (ev.type === 'assistant_message') {
+        lines.push(`**助手**：`, '', (ev.content ?? '').slice(0, 2000), '')
+      } else if (ev.type === 'tool_call_request') {
+        toolCount += 1
+        lines.push(`- ⚙ 工具调用：\`${ev.name}\``)
+      }
+    }
+    lines.push('', `---`, `共 ${userCount} 轮对话、${toolCount} 次工具调用。`)
+    useKnowledgeStore.getState().importNote(title, lines.join('\n'))
+    setBranching(false)
   }
 
   const deleteSession = async (file: string) => {
@@ -141,34 +190,81 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+        <div className="sh-search">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void doSearch()
+            }}
+            placeholder="跨会话检索…"
+          />
+          <button className="assistant-btn" onClick={() => void doSearch()} title="检索">
+            <Search size={12} />
+            {searching ? '…' : '检索'}
+          </button>
+          {searchResults && (
+            <button className="assistant-btn" onClick={() => setSearchResults(null)} title="返回会话列表">
+              返回
+            </button>
+          )}
+        </div>
         {error && <div className="assistant-banner-error">{error}</div>}
         <div className="sh-body">
           <div className="sh-list">
-            {sessions.length === 0 && <p className="sh-empty">暂无历史会话</p>}
-            {sessions.map((s) => (
-              <div
-                key={s.file}
-                className={`sh-item ${activeFile === s.file ? 'active' : ''}`}
-                onClick={() => void openSession(s.file)}
-              >
-                <span className="sh-item-label">{sessionLabel(s.sessionId)}</span>
-                <span className="sh-item-meta">
-                  {formatSize(s.size)}
-                  <button
-                    className="sh-item-del"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void deleteSession(s.file)
-                    }}
-                    title="删除会话"
+            {searchResults ? (
+              searchResults.length === 0 ? (
+                <p className="sh-empty">无匹配会话</p>
+              ) : (
+                searchResults.map((r) => (
+                  <div key={r.file} className="sh-item" onClick={() => void openSession(r.file)}>
+                    <span className="sh-item-label">{sessionLabel(r.sessionId)}</span>
+                    <span className="sh-item-meta sh-hits">{r.hits.length} 处命中</span>
+                    <div className="sh-snippets">
+                      {r.hits.slice(0, 2).map((h, i) => (
+                        <p key={i} className="sh-snippet" title={h.snippet}>{h.snippet}</p>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )
+            ) : (
+              <>
+                {sessions.length === 0 && <p className="sh-empty">暂无历史会话</p>}
+                {sessions.map((s) => (
+                  <div
+                    key={s.file}
+                    className={`sh-item ${activeFile === s.file ? 'active' : ''}`}
+                    onClick={() => void openSession(s.file)}
                   >
-                    <Trash2 size={11} />
-                  </button>
-                </span>
-              </div>
-            ))}
+                    <span className="sh-item-label">{sessionLabel(s.sessionId)}</span>
+                    <span className="sh-item-meta">
+                      {formatSize(s.size)}
+                      <button
+                        className="sh-item-del"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void deleteSession(s.file)
+                        }}
+                        title="删除会话"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
           <div className="sh-detail">
+            {activeFile && (
+              <div className="sh-detail-actions">
+                <button className="assistant-btn" onClick={() => void branchToNote()} disabled={branching} title="生成 vault 笔记；固定后作为新会话上下文（按笔记分支）">
+                  <FileText size={12} />
+                  {branching ? '生成中…' : '分支为笔记'}
+                </button>
+              </div>
+            )}
             {!activeFile && <p className="sh-empty">选择左侧会话查看事件流</p>}
             {activeFile && events.length === 0 && <p className="sh-empty">该会话没有事件记录</p>}
             {events.map((e, i) => (

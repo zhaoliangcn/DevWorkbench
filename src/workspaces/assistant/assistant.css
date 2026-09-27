@@ -1075,3 +1075,47 @@
   color: var(--text-secondary, inherit);
   font-variant-numeric: tabular-nums;
 }
+
+/* ===== 附录 B.3.4：会话检索与分支（SessionHistory 扩展） ===== */
+
+.sh-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, rgba(127, 127, 127, 0.3));
+}
+
+.sh-search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sh-item .sh-hits {
+  font-size: 11px;
+  color: var(--color-primary, #7aa2f7);
+}
+
+.sh-snippets {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sh-snippet {
+  font-size: 11px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: var(--text-secondary, inherit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sh-detail-actions {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color, rgba(127, 127, 127, 0.25));
+}

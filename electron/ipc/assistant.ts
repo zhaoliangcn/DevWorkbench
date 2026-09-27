@@ -371,6 +371,49 @@ function registerAssistantIpc() {
     }
   })
 
+  // B.3.4 跨会话检索：遍历 trajectory 事件，命中内容片段（每会话 ≤5 条、总共 ≤30 条会话）
+  ipcMain.handle('assistant:history:search', async (_event, query: string) => {
+    try {
+      const workingDir = getVaultPath()
+      if (!workingDir) return { success: false, error: '尚未选择知识库文件夹', results: [] }
+      const q = query.trim().toLowerCase()
+      if (!q) return { success: true, results: [] }
+      const sessions = SessionStore.listSessions(workingDir)
+      const results: {
+        sessionId: string
+        file: string
+        mtimeMs: number
+        hits: { timestamp: string; type: string; snippet: string }[]
+      }[] = []
+      for (const s of sessions) {
+        if (results.length >= 30) break
+        const events = (await SessionStore.readEvents(s.file)) as Array<Record<string, unknown>>
+        const hits: { timestamp: string; type: string; snippet: string }[] = []
+        for (const ev of events) {
+          if (hits.length >= 5) break
+          const parts = [ev.content, ev.arguments ? JSON.stringify(ev.arguments) : '']
+          const text = parts.filter((p): p is string => typeof p === 'string' && p.length > 0).join(' ')
+          if (!text) continue
+          const idx = text.toLowerCase().indexOf(q)
+          if (idx < 0) continue
+          const start = Math.max(0, idx - 40)
+          const end = idx + q.length + 40
+          hits.push({
+            timestamp: typeof ev.timestamp === 'string' ? ev.timestamp : '',
+            type: String(ev.type ?? ''),
+            snippet: `${start > 0 ? '…' : ''}${text.slice(start, end)}${end < text.length ? '…' : ''}`,
+          })
+        }
+        if (hits.length > 0) {
+          results.push({ sessionId: s.sessionId, file: s.file, mtimeMs: s.mtimeMs, hits })
+        }
+      }
+      return { success: true, results }
+    } catch (e) {
+      return { success: false, error: errMessage(e), results: [] }
+    }
+  })
+
   // ---------- 技能预设进阶（切片 H.2）：工具清单与运行时工具子集 ----------
 
   ipcMain.handle('assistant:tools:list', () => {
