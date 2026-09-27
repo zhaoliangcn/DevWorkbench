@@ -43,10 +43,22 @@ interface ElectronAPI {
     getPath: () => Promise<string | null>
     getName: () => Promise<string | null>
     select: () => Promise<{ path: string; name: string } | null>
+    /** vault 监听（附录 E E.3.6）：外部文件变更推送；返回取消订阅函数 */
+    onChanged: (
+      callback: (change: { relPath: string; kind: 'add' | 'change' | 'unlink' }) => void,
+    ) => () => void
+  }
+  trash: {
+    list: () => Promise<{ relPath: string; name: string; mtime: number }[]>
+    restore: (relPath: string) => Promise<{ path: string }>
+    purge: (relPath: string) => Promise<void>
   }
   file: {
     read: (relativePath: string) => Promise<string | null>
     write: (relativePath: string, content: string) => Promise<void>
+    /** 二进制附件通道（附录 E E.3.5）：base64 传输 */
+    writeBinary: (relativePath: string, base64: string) => Promise<void>
+    readBinary: (relativePath: string) => Promise<string | null>
     delete: (relativePath: string) => Promise<void>
     list: () => Promise<{ path: string; name: string; content: string }[]>
     export: (relativePath: string, content: string) => Promise<void>

@@ -3,17 +3,29 @@ import { persist } from 'zustand/middleware'
 import type { Note, Folder, Link, RightPanelTab, Theme, TreeNode, NoteRef, AiConfig } from '../types'
 import { useAppStore } from './appStore'
 import {
-  extractTags,
   buildLinks,
   generateNoteId,
   generateFolderId,
   sanitizeFileName,
+  extractUnresolved,
+  findUnlinkedMentions,
+  canBeWikiTarget,
 } from '../workspaces/knowledge/utils/markdown'
+import { extractAllTags } from '../workspaces/knowledge/utils/frontmatter'
+import {
+  renderTemplate,
+  todayStr,
+  TEMPLATE_DIR,
+  DEFAULT_DAILY_TEMPLATE,
+} from '../workspaces/knowledge/utils/template'
+import { rankSearch } from '../workspaces/knowledge/utils/search'
+import type { SearchHit } from '../workspaces/knowledge/utils/search'
 import { getDefaultConfig } from '../workspaces/knowledge/utils/ai'
 import {
   openVault as fsOpenVault,
   isVaultOpen,
   writeFile,
+  readFile,
   deleteFile,
   moveFile,
   createDirectory,
@@ -21,6 +33,8 @@ import {
   listAllFiles,
   listDirectories,
   exportFile,
+  restoreTrashFile,
+  subscribeVaultChanges,
 } from '../workspaces/knowledge/utils/filesystem'
 
 interface AppState {
@@ -36,10 +50,12 @@ interface AppState {
   aiConfig: AiConfig
   vaultName: string | null
   vaultReady: boolean
+  /** vault/templates/ 下的模板（id = 文件名去 .md → 内容）；不持久化，随 vault 加载刷新 */
+  templates: Record<string, string>
   /** 已钉到 AI 助手的笔记 id（发送消息时作为上下文，见设计文档 C.5） */
   pinnedForAssistant: string[]
 
-  createNote: (folderPath?: string) => string
+  createNote: (folderPath?: string, options?: { templateId?: string }) => string
   deleteNote: (id: string) => void
   moveNote: (id: string, targetFolderPath: string) => void
   updateNoteContent: (id: string, content: string) => void
@@ -56,13 +72,26 @@ interface AppState {
   getAllLinks: () => Link[]
   getBacklinks: (noteId: string) => Link[]
   getOutlinks: (noteId: string) => Link[]
+  /** 未解析出链（死链）标题列表，按出现顺序去重（附录 E E.3.1） */
+  getUnresolved: (noteId: string) => string[]
+  /** 未链接提及：正文纯文本中提到、但未用 [[ ]] 链接的其他笔记（附录 E E.3.1） */
+  getUnlinkedMentions: (noteId: string) => { id: string; title: string }[]
+  /** 按标题取笔记或一键创建（死链生长）；返回笔记 id 并设为当前 */
+  createNoteWithTitle: (title: string) => string
   getNotesByTag: (tag: string) => Note[]
   getAllTags: () => string[]
   getNoteByTitle: (title: string) => Note | undefined
   getFolderTree: () => TreeNode[]
-  searchNotes: (query: string) => Note[]
+  /** 全文搜索（附录 E E.3.2）：排序命中（标题×3/标签×2/正文×1）+ 正文片段 */
+  searchNotes: (query: string) => SearchHit[]
   navigateToNote: (title: string) => void
   importNote: (title: string, content: string, folderPath?: string) => string
+  /** 每日笔记（附录 E E.3.4）：YYYY-MM-DD.md 已存在则打开，否则按 daily 模板创建（幂等） */
+  createDailyNote: () => string
+  /** 外部 vault 变更增量合并（附录 E E.3.6）：以磁盘为准 upsert/remove */
+  applyVaultChange: (change: { relPath: string; kind: 'add' | 'change' | 'unlink' }) => void
+  /** 从回收站恢复笔记（附录 E E.3.6）：移回原路径并打开 */
+  restoreFromTrash: (relPath: string) => Promise<void>
   togglePinForAssistant: (id: string) => void
   updateAiConfig: (config: Partial<AiConfig>) => void
   openVault: () => Promise<void>
@@ -196,9 +225,42 @@ function syncWriteFile(path: string, content: string) {
   }
 }
 
-function syncDeleteFile(path: string) {
-  if (isVaultOpen()) {
-    deleteFile(path).catch(() => {})
+/** 以磁盘为准 upsert 一篇笔记（附录 E E.3.6 增量合并）；返回 note id，读取失败返回 null */
+async function upsertNoteFromDisk(relPath: string): Promise<string | null> {
+  let content: string
+  try {
+    content = await readFile(relPath)
+  } catch {
+    return null
+  }
+  const title = relPath.split('/').pop()!.replace(/\.md$/i, '')
+  const now = Date.now()
+
+  useStore.setState((state) => {
+    const existing = Object.values(state.notes).find((n) => n.path === relPath)
+    const note: Note = existing
+      ? { ...existing, title, content, tags: extractAllTags(content), updatedAt: now }
+      : {
+          id: generateNoteId(),
+          title,
+          content,
+          path: relPath,
+          createdAt: now,
+          updatedAt: now,
+          tags: extractAllTags(content),
+        }
+    return { notes: { ...state.notes, [note.id]: note } }
+  })
+  return Object.values(useStore.getState().notes).find((n) => n.path === relPath)?.id ?? null
+}
+
+/** 模板文件增量合并 */
+async function upsertTemplateFromDisk(id: string, relPath: string): Promise<void> {
+  try {
+    const content = await readFile(relPath)
+    useStore.setState((state) => ({ templates: { ...state.templates, [id]: content } }))
+  } catch {
+    // 文件已消失：保留旧模板直至下一次全量加载
   }
 }
 
@@ -235,26 +297,31 @@ export const useStore = create<AppState>()(
       aiConfig: getDefaultConfig('ollama'),
       vaultName: null,
       vaultReady: false,
+      templates: {},
       pinnedForAssistant: [],
 
-      createNote: (folderPath?: string) => {
+      createNote: (folderPath?: string, options?: { templateId?: string }) => {
         const id = generateNoteId()
         const title = '未命名笔记'
         const fileName = sanitizeFileName(title) + '.md'
         const path = folderPath ? `${folderPath}/${fileName}` : fileName
         const now = Date.now()
 
+        // 指定模板则渲染占位符（附录 E E.3.4）；模板缺失回退空笔记
+        const template = options?.templateId ? get().templates[options.templateId] : undefined
+        const content = template ? renderTemplate(template, { title, date: todayStr() }) : ''
+
         const note: Note = {
           id,
           title,
-          content: '',
+          content,
           path,
           createdAt: now,
           updatedAt: now,
           tags: [],
         }
 
-        syncWriteFile(path, '')
+        syncWriteFile(path, content)
 
         set((state) => ({
           notes: { ...state.notes, [id]: note },
@@ -267,7 +334,8 @@ export const useStore = create<AppState>()(
       deleteNote: (id: string) => {
         const note = get().notes[id]
         if (note) {
-          syncDeleteFile(note.path)
+          // 回收站（附录 E E.3.6）：移入 trash/ 保留相对路径（恢复时剥离前缀回原位），替代直删
+          syncMoveFile(note.path, `trash/${note.path}`)
         }
 
         set((state) => {
@@ -309,7 +377,7 @@ export const useStore = create<AppState>()(
         set((state) => {
           const note = state.notes[id]
           if (!note) return state
-          const tags = extractTags(content)
+          const tags = extractAllTags(content)
 
           syncWriteFile(note.path, content)
 
@@ -448,6 +516,45 @@ export const useStore = create<AppState>()(
         return buildLinks(note.id, note.title, note.content, titleToId)
       },
 
+      getUnresolved: (noteId: string) => {
+        const { notes } = get()
+        const note = notes[noteId]
+        if (!note) return []
+
+        const titleToId = new Map<string, string>()
+        for (const n of Object.values(notes)) {
+          titleToId.set(n.title, n.id)
+        }
+
+        return extractUnresolved(note.content, titleToId)
+      },
+
+      getUnlinkedMentions: (noteId: string) => {
+        const { notes } = get()
+        const note = notes[noteId]
+        if (!note) return []
+
+        const others = Object.values(notes).filter(
+          (n) => n.id !== noteId && canBeWikiTarget(n.title)
+        )
+        const mentioned = findUnlinkedMentions(
+          note.content,
+          others.map((n) => n.title)
+        )
+        return others.filter((n) => mentioned.includes(n.title))
+      },
+
+      createNoteWithTitle: (title: string) => {
+        const existing = get().getNoteByTitle(title)
+        if (existing) {
+          set({ activeNoteId: existing.id })
+          return existing.id
+        }
+        const id = get().importNote(title, `# ${title}\n`)
+        set({ activeNoteId: id })
+        return id
+      },
+
       getNotesByTag: (tag: string) => {
         return Object.values(get().notes).filter((n) => n.tags.includes(tag))
       },
@@ -471,20 +578,78 @@ export const useStore = create<AppState>()(
       },
 
       searchNotes: (query: string) => {
-        if (!query.trim()) return []
-        const q = query.toLowerCase()
-        return Object.values(get().notes).filter(
-          (n) =>
-            n.title.toLowerCase().includes(q) ||
-            n.content.toLowerCase().includes(q) ||
-            n.tags.some((t) => t.toLowerCase().includes(q))
-        )
+        return rankSearch(Object.values(get().notes), query)
       },
 
       navigateToNote: (title: string) => {
         const note = get().getNoteByTitle(title)
         if (note) {
           set({ activeNoteId: note.id })
+        }
+      },
+
+      createDailyNote: () => {
+        const date = todayStr()
+        // 幂等：按磁盘文件名（path）找当日笔记，存在即打开
+        const existing = Object.values(get().notes).find((n) => n.path === `${date}.md`)
+        if (existing) {
+          set({ activeNoteId: existing.id })
+          return existing.id
+        }
+        const template = get().templates['daily'] ?? DEFAULT_DAILY_TEMPLATE
+        const id = get().importNote(date, renderTemplate(template, { title: date, date }))
+        set({ activeNoteId: id })
+        return id
+      },
+
+      applyVaultChange: (change) => {
+        const { relPath, kind } = change
+        // 回收站/附件不进笔记树（主进程已过滤，此处兜底）
+        if (relPath.startsWith('trash/') || relPath.startsWith('attachments/')) return
+
+        // 模板目录：维护 templates 表
+        if (relPath.startsWith(TEMPLATE_DIR)) {
+          const id = relPath.slice(TEMPLATE_DIR.length).replace(/\.md$/i, '')
+          if (kind === 'unlink') {
+            set((state) => {
+              const { [id]: _removed, ...rest } = state.templates
+              return { templates: rest }
+            })
+            return
+          }
+          void upsertTemplateFromDisk(id, relPath)
+          return
+        }
+
+        if (!relPath.endsWith('.md')) return
+
+        if (kind === 'unlink') {
+          set((state) => {
+            const target = Object.values(state.notes).find((n) => n.path === relPath)
+            if (!target) return state
+            const { [target.id]: _removed, ...rest } = state.notes
+            return {
+              notes: rest,
+              // 活动笔记被外部删除时切到剩余第一篇
+              activeNoteId:
+                state.activeNoteId === target.id ? Object.keys(rest)[0] || null : state.activeNoteId,
+              pinnedForAssistant: state.pinnedForAssistant.filter((p) => p !== target.id),
+            }
+          })
+          return
+        }
+
+        // add / change：以磁盘为准（自写回声由主进程静默窗口拦截）
+        void upsertNoteFromDisk(relPath)
+      },
+
+      restoreFromTrash: async (relPath: string) => {
+        try {
+          const { path: restoredPath } = await restoreTrashFile(relPath)
+          const id = await upsertNoteFromDisk(restoredPath)
+          if (id) set({ activeNoteId: id })
+        } catch {
+          // 恢复失败静默（主进程已做路径校验与重名处理）
         }
       },
 
@@ -502,7 +667,7 @@ export const useStore = create<AppState>()(
         const fileName = sanitizeFileName(finalTitle) + '.md'
         const path = folderPath ? `${folderPath}/${fileName}` : fileName
         const now = Date.now()
-        const tags = extractTags(content)
+        const tags = extractAllTags(content)
 
         syncWriteFile(path, content)
 
@@ -553,15 +718,28 @@ export const useStore = create<AppState>()(
           const dirs = await listDirectories()
           const now = Date.now()
 
+          // vault 约定目录（附录 E E.3.4/E.3.5）：templates/ 归入模板、attachments/ 附件不进笔记树
+          const loadedTemplates: Record<string, string> = {}
+          const noteFiles = files.filter((f) => {
+            if (f.path.startsWith(TEMPLATE_DIR)) {
+              loadedTemplates[f.name.replace(/\.md$/i, '')] = f.content
+              return false
+            }
+            return true
+          })
+          const isReservedDir = (d: string) =>
+            d === 'templates' || d.startsWith(TEMPLATE_DIR) || d === 'attachments' || d.startsWith('attachments/')
+          const templateDirs = dirs.filter((d) => !isReservedDir(d))
+
           const loadedNotes: Record<string, Note> = {}
-          const loadedFolders: Folder[] = dirs.map((d) => ({
+          const loadedFolders: Folder[] = templateDirs.map((d) => ({
             id: generateFolderId(),
             name: d.split('/').pop() || d,
             path: d,
             children: [],
           }))
 
-          for (const file of files) {
+          for (const file of noteFiles) {
             const id = generateNoteId()
             loadedNotes[id] = {
               id,
@@ -570,7 +748,7 @@ export const useStore = create<AppState>()(
               path: file.path,
               createdAt: now,
               updatedAt: now,
-              tags: extractTags(file.content),
+              tags: extractAllTags(file.content),
             }
           }
 
@@ -578,6 +756,7 @@ export const useStore = create<AppState>()(
           set({
             notes: loadedNotes,
             folders: loadedFolders,
+            templates: loadedTemplates,
             activeNoteId: firstId,
           })
         } catch {
@@ -604,3 +783,8 @@ export const useStore = create<AppState>()(
     }
   )
 )
+
+// vault 监听订阅（附录 E E.3.6）：store 为应用级单例，模块生命周期内常驻，无需清理
+if (typeof window !== 'undefined') {
+  subscribeVaultChanges((change) => useStore.getState().applyVaultChange(change))
+}

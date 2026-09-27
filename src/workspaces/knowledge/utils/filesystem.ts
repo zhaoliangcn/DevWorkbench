@@ -32,6 +32,20 @@ export async function writeFile(relativePath: string, content: string): Promise<
   await api.file.write(relativePath, content)
 }
 
+/** 二进制附件写入（base64，附录 E E.3.5）；vault 未打开时抛错 */
+export async function writeBinaryFile(relativePath: string, base64: string): Promise<void> {
+  const api = getAPI()
+  if (!api) throw new Error('未打开 Vault 目录')
+  await api.file.writeBinary(relativePath, base64)
+}
+
+/** 二进制读取（base64）；不存在或未打开 vault 返回 null */
+export async function readBinaryFile(relativePath: string): Promise<string | null> {
+  const api = getAPI()
+  if (!api) return null
+  return api.file.readBinary(relativePath)
+}
+
 export async function readFile(relativePath: string): Promise<string> {
   const api = getAPI()
   if (!api) throw new Error('未打开 Vault 目录')
@@ -107,6 +121,41 @@ export async function listDirectories(): Promise<string[]> {
   const api = getAPI()
   if (!api) return []
   return api.dir.list()
+}
+
+/* ---------- 回收站（附录 E E.3.6） ---------- */
+
+export interface TrashItem {
+  relPath: string
+  name: string
+  mtime: number
+}
+
+export async function listTrash(): Promise<TrashItem[]> {
+  const api = getAPI()
+  if (!api) return []
+  return api.trash.list()
+}
+
+export async function restoreTrashFile(relPath: string): Promise<{ path: string }> {
+  const api = getAPI()
+  if (!api) throw new Error('未打开 Vault 目录')
+  return api.trash.restore(relPath)
+}
+
+export async function purgeTrashFile(relPath: string): Promise<void> {
+  const api = getAPI()
+  if (!api) throw new Error('未打开 Vault 目录')
+  await api.trash.purge(relPath)
+}
+
+/** 订阅 vault 外部变更推送（附录 E E.3.6）；返回取消订阅函数 */
+export function subscribeVaultChanges(
+  callback: (change: { relPath: string; kind: 'add' | 'change' | 'unlink' }) => void,
+): () => void {
+  const api = getAPI()
+  if (!api) return () => {}
+  return api.vault.onChanged(callback)
 }
 
 export function isFileSystemSupported(): boolean {

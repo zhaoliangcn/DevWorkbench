@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Compass, FilePlus2, Bot, Wrench, FileCode2 } from 'lucide-react'
+import { Compass, FilePlus2, Bot, Wrench, FileCode2, FileText } from 'lucide-react'
 import {
   useCrossStore,
   detectKind,
@@ -9,6 +9,7 @@ import {
 } from '../../store/crossStore'
 import { useAppStore } from '../../store/appStore'
 import { useToolboxStore } from '../../store/toolboxStore'
+import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
 import { WORKSPACES } from '../workspaces'
 import { TOOLBOX_MODULES } from '../constants'
 import { defaultCarryTitle } from '../hooks/useSaveToVault'
@@ -113,14 +114,37 @@ function CommandPanel({ onClose }: { onClose: () => void }) {
   }, [onClose])
 
   const q = query.trim().toLowerCase()
+
+  // 笔记动作源（附录 E E.3.2 快速切换器）：query 非空时才注入，默认视图保持清爽
+  const notes = useKnowledgeStore((s) => s.notes)
+  const noteCommands = useMemo<CommandItem[]>(() => {
+    if (!q) return []
+    return Object.values(notes).map((n) => ({
+      id: `note:${n.id}`,
+      label: n.title,
+      keywords: `${n.path} ${n.tags.join(' ')}`,
+      hint: '笔记',
+      icon: <FileText size={15} />,
+      run: () => {
+        useKnowledgeStore.getState().setActiveNote(n.id)
+        useAppStore.getState().setActiveWorkspace('knowledge')
+        onClose()
+      },
+    }))
+  }, [notes, q, onClose])
+
+  const searchPool = useMemo(
+    () => [...commands, ...noteCommands],
+    [commands, noteCommands],
+  )
   const filtered = useMemo(
     () =>
       q
-        ? commands.filter(
+        ? searchPool.filter(
             (c) => c.label.toLowerCase().includes(q) || c.keywords.toLowerCase().includes(q),
           )
-        : commands,
-    [commands, q],
+        : searchPool,
+    [searchPool, q],
   )
 
   // 捕获 fallback：输入非空且无任何命令匹配 → 按内容分发到工作区

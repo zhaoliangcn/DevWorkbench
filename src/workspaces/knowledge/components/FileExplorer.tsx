@@ -12,6 +12,7 @@ import {
   Trash2,
   Upload,
   Download,
+  CalendarDays,
 } from 'lucide-react'
 
 function buildFolderTree(
@@ -365,6 +366,7 @@ export default function FileExplorer() {
   const folders = useStore((s) => s.folders)
   const createNote = useStore((s) => s.createNote)
   const createFolder = useStore((s) => s.createFolder)
+  const createDailyNote = useStore((s) => s.createDailyNote)
   const importNote = useStore((s) => s.importNote)
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolder, setShowNewFolder] = useState(false)
@@ -424,6 +426,13 @@ export default function FileExplorer() {
       <div className="explorer-header">
         <span className="explorer-title">文件</span>
         <div className="explorer-actions">
+          <button
+            className="icon-btn"
+            onClick={createDailyNote}
+            title="今日笔记"
+          >
+            <CalendarDays size={16} />
+          </button>
           <button
             className="icon-btn"
             onClick={handleImportClick}

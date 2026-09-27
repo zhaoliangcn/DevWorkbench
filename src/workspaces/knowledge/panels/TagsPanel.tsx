@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../../../store/knowledgeStore'
 import { Tag, FileText } from 'lucide-react'
 
 export default function TagsPanel() {
+  const notes = useStore((s) => s.notes)
   const getAllTags = useStore((s) => s.getAllTags)
   const getNotesByTag = useStore((s) => s.getNotesByTag)
   const setActiveNote = useStore((s) => s.setActiveNote)
@@ -11,6 +12,17 @@ export default function TagsPanel() {
   const allTags = getAllTags()
   const taggedNotes = selectedTag ? getNotesByTag(selectedTag) : []
 
+  // 标签 → 笔记计数（附录 E E.3.3），随 notes 派生缓存
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const note of Object.values(notes)) {
+      for (const tag of note.tags) {
+        counts[tag] = (counts[tag] || 0) + 1
+      }
+    }
+    return counts
+  }, [notes])
+
   return (
     <div className="tags-panel">
       <div className="panel-section">
@@ -18,7 +30,7 @@ export default function TagsPanel() {
           <Tag size={14} /> 标签 ({allTags.length})
         </h3>
         {allTags.length === 0 ? (
-          <p className="panel-empty-text">暂无标签，在笔记中使用 #标签名 创建标签</p>
+          <p className="panel-empty-text">暂无标签，在笔记中使用 #标签名 或 frontmatter tags 创建标签</p>
         ) : (
           <div className="tags-cloud">
             {allTags.map((tag) => (
@@ -30,6 +42,7 @@ export default function TagsPanel() {
                 }
               >
                 #{tag}
+                <span className="tag-chip-count">{tagCounts[tag] ?? 0}</span>
               </span>
             ))}
           </div>
