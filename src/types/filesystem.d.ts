@@ -128,6 +128,31 @@ interface ElectronAPI {
     }>
     read: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
   }
+  secvault: {
+    /** 附录 B.7：凭据保险库 */
+    status: () => Promise<{ initialized: boolean; entryCount: number }>
+    init: (password: string) => Promise<{ success: boolean; error?: string }>
+    verify: (password: string) => Promise<{
+      success: boolean
+      verified: boolean
+      error?: string
+    }>
+    list: (password: string) => Promise<{
+      success: boolean
+      entries: { id: string; name: string; kind: string; createdAt: string }[]
+      error?: string
+    }>
+    get: (password: string, id: string) => Promise<{
+      success: boolean
+      value: string
+      error?: string
+    }>
+    put: (
+      password: string,
+      payload: { id?: string; name: string; kind: string; value: string }
+    ) => Promise<{ success: boolean; error?: string }>
+    del: (password: string, id: string) => Promise<{ success: boolean; error?: string }>
+  }
   http: {
     /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
     request: (args: {

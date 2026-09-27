@@ -84,6 +84,19 @@ const api = {
     pick: () => ipcRenderer.invoke('envfile:pick'),
     read: (filePath: string) => ipcRenderer.invoke('envfile:read', filePath),
   },
+  secvault: {
+    /** 附录 B.7：凭据保险库（主进程级 AES-256-GCM 加密存储） */
+    status: () => ipcRenderer.invoke('secvault:status'),
+    init: (password: string) => ipcRenderer.invoke('secvault:init', password),
+    verify: (password: string) => ipcRenderer.invoke('secvault:verify', password),
+    list: (password: string) => ipcRenderer.invoke('secvault:list', password),
+    get: (password: string, id: string) => ipcRenderer.invoke('secvault:get', password, id),
+    put: (
+      password: string,
+      payload: { id?: string; name: string; kind: string; value: string }
+    ) => ipcRenderer.invoke('secvault:put', password, payload),
+    del: (password: string, id: string) => ipcRenderer.invoke('secvault:delete', password, id),
+  },
   http: {
     /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
     request: (args: { url: string; method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }) =>

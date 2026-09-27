@@ -178,6 +178,26 @@ export interface ElectronAPIAdapter {
     files: { path: string; name: string }[]
   }>
   envReadFile: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
+
+  /** 附录 B.7：凭据保险库（主密码仅存渲染层内存，主进程不持久化） */
+  vaultStatus: () => Promise<{ initialized: boolean; entryCount: number }>
+  vaultInit: (password: string) => Promise<{ success: boolean; error?: string }>
+  vaultVerify: (password: string) => Promise<{ success: boolean; verified: boolean; error?: string }>
+  vaultList: (password: string) => Promise<{
+    success: boolean
+    entries: { id: string; name: string; kind: string; createdAt: string }[]
+    error?: string
+  }>
+  vaultGet: (password: string, id: string) => Promise<{
+    success: boolean
+    value: string
+    error?: string
+  }>
+  vaultPut: (
+    password: string,
+    payload: { id?: string; name: string; kind: string; value: string }
+  ) => Promise<{ success: boolean; error?: string }>
+  vaultDelete: (password: string, id: string) => Promise<{ success: boolean; error?: string }>
 }
 
 // 默认 mock 实现，用于纯 Web 环境
@@ -287,6 +307,14 @@ const mockAPI: ElectronAPIAdapter = {
 
   envPickFiles: () => Promise.resolve({ success: false, canceled: true, files: [] }),
   envReadFile: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持文件读取' }),
+
+  vaultStatus: () => Promise.resolve({ initialized: false, entryCount: 0 }),
+  vaultInit: () => Promise.resolve({ success: false, error: 'Web 环境不支持保险库' }),
+  vaultVerify: () => Promise.resolve({ success: false, verified: false, error: 'Web 环境不支持保险库' }),
+  vaultList: () => Promise.resolve({ success: false, entries: [], error: 'Web 环境不支持保险库' }),
+  vaultGet: () => Promise.resolve({ success: false, value: '', error: 'Web 环境不支持保险库' }),
+  vaultPut: () => Promise.resolve({ success: false, error: 'Web 环境不支持保险库' }),
+  vaultDelete: () => Promise.resolve({ success: false, error: 'Web 环境不支持保险库' }),
 }
 
 function createElectronAPI(): ElectronAPIAdapter {
@@ -351,6 +379,14 @@ function createElectronAPI(): ElectronAPIAdapter {
 
     envPickFiles: () => bridge.envfile.pick(),
     envReadFile: (filePath) => bridge.envfile.read(filePath),
+
+    vaultStatus: () => bridge.secvault.status(),
+    vaultInit: (password) => bridge.secvault.init(password),
+    vaultVerify: (password) => bridge.secvault.verify(password),
+    vaultList: (password) => bridge.secvault.list(password),
+    vaultGet: (password, id) => bridge.secvault.get(password, id),
+    vaultPut: (password, payload) => bridge.secvault.put(password, payload),
+    vaultDelete: (password, id) => bridge.secvault.del(password, id),
   }
 }
 

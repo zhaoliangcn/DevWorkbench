@@ -15,6 +15,7 @@ import { registerSqliteIpc, stopSqlite } from './ipc/sqlite.js'
 import { registerAssistantIpc, stopAssistant } from './ipc/assistant.js'
 import { registerDockerIpc } from './ipc/docker.js'
 import { registerEnvfileIpc } from './ipc/envfile.js'
+import { registerSecvaultIpc } from './ipc/secvault.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -81,6 +82,8 @@ app.whenReady().then(async () => {
   registerDockerIpc()
   // 附录 B.6.3: .env 管理器（envfile:* 命名空间）
   registerEnvfileIpc()
+  // 附录 B.7: 凭据保险库（secvault:* 命名空间）
+  registerSecvaultIpc()
 
   createWindow()
 

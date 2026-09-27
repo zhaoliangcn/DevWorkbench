@@ -2673,3 +2673,128 @@
   font-size: 12px;
   white-space: pre;
 }
+
+/* ---------- 附录 B.7：凭据保险库 ---------- */
+
+.tb-root .secvault-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+.tb-root .secvault-gate input {
+  width: 100%;
+}
+
+.tb-root .secvault-error {
+  color: var(--error-color, #f87171);
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.tb-root .secvault-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tb-root .secvault-meta {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .secvault-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tb-root .secvault-form textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.tb-root .secvault-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-root .secvault-form-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.tb-root .secvault-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tb-root .secvault-row {
+  display: grid;
+  grid-template-columns: 48px minmax(120px, 1.2fr) minmax(120px, 2fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.tb-root .secvault-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .secvault-kind {
+  font-size: 10px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1px 0;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .secvault-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tb-root .secvault-value {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: var(--text-muted, var(--text-secondary));
+  white-space: nowrap;
+  word-break: break-all;
+}
+
+.tb-root .secvault-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.tb-root .secvault-actions button {
+  display: inline-flex;
+  padding: 2px 5px;
+}
+
+.tb-root .secvault-actions button.danger {
+  color: var(--error-color, #f87171);
+  border-color: color-mix(in srgb, var(--error-color, #f87171) 55%, transparent);
+}
