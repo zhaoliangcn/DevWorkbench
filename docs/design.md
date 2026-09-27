@@ -1136,3 +1136,98 @@ const handleSend = async () => {
 - `Activity` 为 React 19.2+ 特性：若当前 React 小版本不足，降级为「全挂载 + CSS display 切换」等价实现（保活语义相同，仅无官方卸载调度）。
 - 保活与 lazy 组合时，隐藏工作区首挂载即触发 chunk 加载 —— 首屏仍只加载激活工作区，后续 chunk 在空闲期预取（`requestIdleCallback` 预取可选）。
 - ErrorBoundary 无法捕获异步回调/事件处理器内的错误：关键 IPC 调用仍需各工作区自行 try/catch（现状已基本满足）。
+
+---
+
+## 附录 E：知识库深度功能设计（my-obsidian 血统延伸）
+
+> 2026-09-27。目标：在既有「链接图 / 回链 / 搜索 / vault 双写」骨架上，补齐 Obsidian 体验层的最后一公里 —— 死链可生长、检索即达、标签可航行、外部变更安全、Agent 可检索。
+
+### E.1 现状盘点
+
+| 层 | 已有 | 位置 |
+|---|---|---|
+| 数据模型 | notes/folders/activeNoteId/pinnedForAssistant/vaultName/vaultReady + create/delete/move/update/getLinks*/searchNotes/exportNote | `src/store/knowledgeStore.ts` |
+| 链接解析 | `extractWikiLinks`（`[[笔记名]]`）+ `extractTags`（`#标签`）+ `buildLinks`（标题→id） | `src/workspaces/knowledge/utils/markdown.ts` |
+| 磁盘契约 | vault 目录 + `vault-config.json`；IPC `vault:getPath/getName/select`；updateNoteContent→syncWriteFile，改标题重写+删旧文件 | `electron/ipc/vault.ts` + `utils/filesystem.ts` |
+| 面板 | BacklinksPanel（回链/出链）、SearchPanel（Cmd/Ctrl+K）、GraphView、MindMapView | `panels/` |
+| 编辑器 | 编辑/分屏/预览；`[[…]]`→data-note-title→marked 渲染；**无自动补全** | `components/MarkdownEditor.tsx` |
+| Agent 联动 | pinnedForAssistant 注入 + `knowledge_read_note`（vault 路径校验 + offset 分段） | `electron/ipc/knowledge-tools.ts` |
+
+结论：骨架已在（链接图、回链、搜索、双写），「深度」缺的是体验层最后一公里。
+
+### E.2 差距分析（对照 Obsidian 核心体验）
+
+| Obsidian 能力 | 现状 | 定性 |
+|---|---|---|
+| 点击未解析链接创建笔记 | buildLinks 只映射已存在标题，死链不可点 | **核心缺口** |
+| `[[目标\|别名]]` 语法 | 解析器无 `\|` 处理 | 小改 |
+| 编辑时 `[[` 自动补全 | 无 | 编辑体验最大缺口 |
+| 未链接提及（unlinked mentions） | 无 | 增量 |
+| 快速切换器 | 无（搜索面板不模糊、无片段） | 增量 |
+| 标签面板/过滤 | extractTags 已解析但零消费 UI | 半成品激活 |
+| frontmatter 属性 | 无 | 增量 |
+| 模板/每日笔记 | 无 | 增量 |
+| 粘贴图片→附件目录 | 无 | 增量 |
+| 外部变更监听 / 回收站 | loadVaultFromDisk 一次性；deleteNote 直删 | **数据安全缺口** |
+
+### E.3 功能切片
+
+#### E.3.1 链接系统深化（P0，血统最正）
+
+1. **未解析链接**：`buildLinks` 返回值新增 `unresolved: Set<title>`（不改签名）；BacklinksPanel 加「未解析出链」分区；预览区点击未命中标题 → createNote 预填并保持链接文本。
+2. **别名**：`extractWikiLinks` 支持 `[[target|alias]]`；渲染显示别名，跳转/建链按 target；图谱连线语义不变。
+3. **自动补全**：MarkdownEditor keydown 检测光标前 `[[` → 定位浮层（行高×行号估算）列标题+别名候选，↑↓/Enter 插入。
+4. **未链接提及**：BacklinksPanel 尾部「提及未链接」区，一键包裹 `[[…]]`（仅首个匹配）。
+
+#### E.3.2 搜索升级 + 快速切换器（P0）
+
+- `searchNotes`：标题命中 ×3 权重 + 正文 ±40 字上下文片段高亮；notes 全在内存，1 万篇内直接扫描，useMemo 预建小写缓存即可（不上索引库）。
+- 快速切换器：**扩入附录 D CommandPalette 动作源**（「跳转笔记」条目，遵守单入口原则），不新增 knowledge 局部快捷键。
+
+#### E.3.3 标签系统（P1）
+
+- store 派生 `tagIndex: Map<tag, noteId[]>`（行内标签与 frontmatter tags 合并去重）。
+- 新增 TagsPanel：标签列表 + 点击过滤笔记列表。
+- frontmatter 最小解析：自写 ~30 行 YAML 子集（tags/aliases/created 三键），**不引 gray-matter**。
+
+#### E.3.4 模板与每日笔记（P1）
+
+- vault/templates/ 约定目录；`createNote` 加 `options.templateId`；占位符 `{{date}}/{{title}}` 替换。
+- FileExplorer 顶部「今日笔记」：`YYYY-MM-DD.md` 存在则打开，否则按 daily 模板创建（幂等）。
+
+#### E.3.5 编辑器深化（P2）
+
+- 粘贴图片：onPaste 拦截 → IPC 写 `attachments/`（复用 vault 路径校验）→ 插入相对路径；marked 渲染相对路径。
+- 大纲面板：解析标题层级，预览区锚点跳转（textarea 滚动定位难，先做预览侧）。
+- 状态栏字数/阅读时长。
+
+#### E.3.6 vault 监听与数据安全（P2）
+
+- 主进程 chokidar 监听 vault → `vault:changed` 推送 → store 增量合并（以磁盘为准）；自写文件用时间戳静默窗口防回环。
+- **deleteNote 改为移入 vault/trash/**（替代直删），面板提供恢复。
+
+#### E.3.7 Agent 联动深化（P3）
+
+- 新增 `knowledge_search_notes` 工具（复用 E.3.2 searchNotes + 既有路径校验），与 `knowledge_read_note` 形成「检索→细读」链路。
+- pinned 注入升级：附当前笔记回链摘要（≤3 条）。
+
+### E.4 实施顺序与验收
+
+| 阶段 | 内容 | 验收 |
+|------|------|------|
+| E.1 | 链接深化 | 死链可一键创建；输入 `[[` 出候选；别名渲染正确且图谱连线不断 |
+| E.2 | 搜索+快速切换 | 命令面板可达任意笔记；搜索结果带片段高亮 |
+| E.3 | 标签系统 | `#标签` 可点击过滤；行内与 frontmatter 标签合并去重 |
+| E.4 | 模板/每日笔记 | 二次点击不重复创建；模板占位符正确替换 |
+| E.5 | 编辑器深化 | 粘贴截图落盘并渲染；大纲跳转生效 |
+| E.6 | 监听+回收站 | 外部编辑器改动 ≤2s 反映；删除可恢复 |
+| E.7 | Agent 联动 | 助手能回答「我的笔记里关于 X 的内容」 |
+
+### E.5 风险与对策
+
+- **buildLinks 公共上游**：返回值用「新增字段」向后兼容，GraphView/BacklinksPanel/图谱三处消费方同步。
+- **XSS**：marked 默认不消毒，`data-note-title` 来自用户内容 —— 改渲染前先核实转义现状。
+- **唯一写入口**：新落盘路径一律走 filesystem.ts 封装；新 IPC（附件/模板/回收站）必须复用 vault 内路径校验，防穿越。
+- **解析器纯函数下沉** utils/ + vitest 覆盖：标签/别名/frontmatter 解析是正则回溯与空串死循环的高发区（沿用既有教训）。
+- **起步顺序**：E.1 → E.2（E.2 顺路清掉 P2 遗留的 CommandPalette 动作源）；E.6 数据安全不宜晚于形成外部编辑习惯。
