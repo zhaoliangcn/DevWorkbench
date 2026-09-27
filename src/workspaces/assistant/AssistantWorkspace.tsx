@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil } from 'lucide-react'
+import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock } from 'lucide-react'
 import { useAssistantStore } from '../../store/assistantStore'
 import { useCrossStore } from '../../store/crossStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
@@ -7,6 +7,7 @@ import { assistantAPI } from './utils/electron'
 import { buildPinnedContext } from './context-inject'
 import { useIsActive } from '../../shared/hooks/useIsActive'
 import { SessionHistory } from './SessionHistory'
+import { TaskBoard } from './TaskBoard'
 import './assistant.css'
 
 /**
@@ -60,6 +61,7 @@ export function AssistantWorkspace() {
     dangerLevel: string
   } | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [taskBoardOpen, setTaskBoardOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
   const [skillName, setSkillName] = useState('')
   const [toolNames, setToolNames] = useState<string[]>([])
@@ -290,6 +292,10 @@ export function AssistantWorkspace() {
           <button className="assistant-btn" onClick={() => setHistoryOpen(true)} title="查看历史会话事件流">
             <History size={13} />
             历史
+          </button>
+          <button className="assistant-btn" onClick={() => setTaskBoardOpen(true)} title="Agent 定时任务：创建/暂停/删除、运行日志、失败重试">
+            <CalendarClock size={13} />
+            定时任务
           </button>
           <button className="assistant-btn" onClick={clearMessages} disabled={running || messages.length === 0}>
             清空
@@ -604,6 +610,7 @@ export function AssistantWorkspace() {
       </div>
 
       {historyOpen && <SessionHistory onClose={() => setHistoryOpen(false)} />}
+      {taskBoardOpen && <TaskBoard onClose={() => setTaskBoardOpen(false)} />}
     </div>
   )
 }

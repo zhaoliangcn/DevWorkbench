@@ -932,3 +932,146 @@
   color: var(--color-danger);
   margin-top: 8px;
 }
+
+/* ===== 附录 B.3：定时任务看板（TaskBoard 抽屉） ===== */
+
+.tb-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tb-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+  color: var(--text-secondary, inherit);
+}
+
+.tb-create {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--border-color, rgba(127, 127, 127, 0.4));
+  border-radius: 6px;
+}
+
+.tb-create-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tb-create-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-create-row .tb-expr {
+  flex: 0 0 130px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.tb-create textarea {
+  resize: vertical;
+}
+
+.tb-task-list,
+.tb-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tb-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.4));
+  border-radius: 6px;
+}
+
+.tb-task-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tb-task-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-task-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-task-meta {
+  font-size: 11px;
+  color: var(--text-secondary, inherit);
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-task-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tb-log {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-color, rgba(127, 127, 127, 0.25));
+}
+
+.tb-chip {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.tb-chip.ok {
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+}
+
+.tb-chip.fail {
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+}
+
+.tb-log-name {
+  flex: 0 0 auto;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tb-log-detail {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-log-time {
+  flex: 0 0 auto;
+  color: var(--text-secondary, inherit);
+  font-variant-numeric: tabular-nums;
+}
