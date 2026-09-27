@@ -13,7 +13,7 @@ import './assistant.css'
 /**
  * AI 助手工作区（Phase 6）：嵌入 dev-assistant-ts 的 Agent 聊天 UI。
  *
- * - 启动时经 IPC 用当前模型配置启动助手（workingDir 固定为知识库 Vault）
+ * - 启动时经 IPC 用当前模型配置启动助手（workingDir 显式设置优先，缺省跟随知识库 Vault）
  * - assistant:events 事件流式渲染（文本增量 / 工具调用 / 状态 / 错误）
  * - 消息发送 → assistant:run（主进程驱动完整 Agent 循环）
  * - 切片 D：知识库钉选笔记作为上下文；审批墙（高危工具调用需手动批准）
@@ -22,6 +22,7 @@ import './assistant.css'
 export function AssistantWorkspace() {
   const models = useAssistantStore((s) => s.models)
   const activeModel = useAssistantStore((s) => s.activeModel)
+  const workingDir = useAssistantStore((s) => s.workingDir)
   const status = useAssistantStore((s) => s.status)
   const setStatus = useAssistantStore((s) => s.setStatus)
   const running = useAssistantStore((s) => s.running)
@@ -89,6 +90,7 @@ export function AssistantWorkspace() {
             schedulerEnabled: true,
             approvalEnabled: useAssistantStore.getState().approvalEnabled,
             policy: useAssistantStore.getState().policy,
+            workingDir: useAssistantStore.getState().workingDir || undefined,
           })
           setStatus(res.status)
           setError(res.error ?? '')
@@ -525,7 +527,8 @@ export function AssistantWorkspace() {
             <Bot size={40} />
             <p>向知识库中的笔记提问，或让助手帮你读写文件。</p>
             <p className="assistant-empty-hint">
-              助手以知识库 Vault 为工作目录，具备文件读写、Glob/Grep、技能与定时任务能力。
+              助手工作目录：{workingDir || '知识库 Vault'}，具备文件读写、Glob/Grep、技能与定时任务能力
+              （可在设置中更改）。
             </p>
           </div>
         )}

@@ -45,7 +45,7 @@ interface AssistantState {
   models: AssistantModelConfig[]
   activeModel: string
   addModel: (m: AssistantModelConfig) => void
-  updateModel: (m: AssistantModelConfig) => void
+  updateModel: (name: string, patch: Partial<AssistantModelConfig>) => void
   removeModel: (name: string) => void
   setActiveModel: (name: string) => void
 
@@ -60,6 +60,10 @@ interface AssistantState {
   /** 审批墙开关（切片 D）：开启后高危工具调用经 assistant:events 推送审批请求 */
   approvalEnabled: boolean
   setApprovalEnabled: (v: boolean) => void
+
+  /** 助手工作目录（'' = 跟随知识库 Vault）；会话/任务存于该目录下 .dev-assistant-store */
+  workingDir: string
+  setWorkingDir: (dir: string) => void
 
   /** 三段式权限清单（切片 E）：随助手启动传入主进程生效 */
   policy: AssistantPolicy
@@ -116,8 +120,12 @@ export const useAssistantStore = create<AssistantState>()(
       models: DEFAULT_MODELS,
       activeModel: 'ollama',
       addModel: (m) => set({ models: [...get().models.filter((x) => x.name !== m.name), m] }),
-      updateModel: (m) =>
-        set({ models: get().models.map((x) => (x.name === m.name ? m : x)) }),
+      /** 按「旧名」定位更新（名称可编辑，不能以新名匹配自身）；改名时同步 activeModel */
+      updateModel: (name, patch) =>
+        set({
+          models: get().models.map((x) => (x.name === name ? { ...x, ...patch } : x)),
+          activeModel: get().activeModel === name ? (patch.name ?? name) : get().activeModel,
+        }),
       removeModel: (name) =>
         set({
           models: get().models.filter((x) => x.name !== name),
@@ -134,6 +142,9 @@ export const useAssistantStore = create<AssistantState>()(
 
       approvalEnabled: false,
       setApprovalEnabled: (approvalEnabled) => set({ approvalEnabled }),
+
+      workingDir: '',
+      setWorkingDir: (workingDir) => set({ workingDir }),
 
       policy: DEFAULT_ASSISTANT_POLICY,
       setPolicy: (policy) => set({ policy }),
@@ -181,6 +192,7 @@ export const useAssistantStore = create<AssistantState>()(
       partialize: (state) => ({
         models: state.models,
         activeModel: state.activeModel,
+        workingDir: state.workingDir,
         policy: state.policy,
         skills: state.skills,
       }),

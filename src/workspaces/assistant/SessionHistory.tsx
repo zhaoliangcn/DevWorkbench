@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { X, RefreshCw, Trash2, FileText, Search } from 'lucide-react'
 import { assistantAPI } from './utils/electron'
+import { useAssistantStore } from '../../store/assistantStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
 
 interface HistorySession {
@@ -95,8 +96,11 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
   >(null)
   const [branching, setBranching] = useState(false)
 
+  // 当前助手工作目录（'' = 跟随知识库 Vault）；历史会话按工作目录隔离
+  const workingDir = () => useAssistantStore.getState().workingDir || undefined
+
   const loadList = useCallback(async () => {
-    const res = await assistantAPI.historyList()
+    const res = await assistantAPI.historyList(workingDir())
     // setState 均在 await 之后（异步回调），避免同步级联渲染
     setError(res.success ? '' : (res.error ?? '加载会话列表失败'))
     setSessions(res.sessions)
@@ -111,7 +115,7 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
 
   const openSession = async (file: string) => {
     setError('')
-    const res = await assistantAPI.historyRead(file)
+    const res = await assistantAPI.historyRead(file, workingDir())
     if (!res.success) {
       setError(res.error ?? '读取会话失败')
       return
@@ -128,7 +132,7 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
     }
     setSearching(true)
     setError('')
-    const res = await assistantAPI.historySearch(query.trim())
+    const res = await assistantAPI.historySearch(query.trim(), workingDir())
     setSearching(false)
     if (!res.success) {
       setError(res.error ?? '检索失败')
@@ -163,7 +167,7 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
   }
 
   const deleteSession = async (file: string) => {
-    const res = await assistantAPI.historyDelete(file)
+    const res = await assistantAPI.historyDelete(file, workingDir())
     if (!res.success) {
       setError(res.error ?? '删除失败')
       return

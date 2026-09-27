@@ -24,6 +24,8 @@ export function SettingsWorkspace() {
   const removeModel = useAssistantStore((s) => s.removeModel)
   const assistantStatus = useAssistantStore((s) => s.status)
   const assistantError = useAssistantStore((s) => s.error)
+  const workingDir = useAssistantStore((s) => s.workingDir)
+  const setWorkingDir = useAssistantStore((s) => s.setWorkingDir)
   const [saving, setSaving] = useState(false)
 
   // 三段式权限清单（切片 E）：本地文本编辑态，保存时解析为清单
@@ -69,6 +71,7 @@ export function SettingsWorkspace() {
         schedulerEnabled: true,
         approvalEnabled: useAssistantStore.getState().approvalEnabled,
         policy,
+        workingDir: useAssistantStore.getState().workingDir || undefined,
       })
       useAssistantStore.getState().setStatus(res.status)
       useAssistantStore.getState().setError(res.error ?? '')
@@ -101,6 +104,14 @@ export function SettingsWorkspace() {
     await assistantAPI.stop()
     useAssistantStore.getState().setStatus(null)
   }
+
+  /** 选择助手工作目录（系统对话框）；改动经「保存并重启助手」生效 */
+  const handlePickWorkingDir = async () => {
+    const res = await assistantAPI.pickWorkingDir()
+    if (res.success && !res.canceled && res.path) setWorkingDir(res.path)
+  }
+
+  const handleResetWorkingDir = () => setWorkingDir('')
 
   useEffect(() => {
     ;(async () => {
@@ -153,17 +164,35 @@ export function SettingsWorkspace() {
         <div className="settings-section">
           <h4>AI 助手</h4>
           <p className="settings-hint">
-            模型配置用于顶栏「AI 助手」工作区（嵌入 dev-assistant-ts，workingDir 为知识库 Vault）。
-            保存后立即生效（运行时热替换，无需重启应用）。
+            模型配置用于顶栏「AI 助手」工作区（嵌入 dev-assistant-ts）。工作目录是助手读写文件、
+            存储会话与定时任务的根目录，修改后经「保存并重启助手」生效。
           </p>
 
-          {models.map((m) => (
-            <div key={m.name} className="assistant-model-card">
+          <div className="setting-row assistant-workdir-row">
+            <label>工作目录</label>
+            <div className="assistant-workdir">
+              <span className="assistant-workdir-path" title={workingDir || '跟随知识库 Vault'}>
+                {workingDir || '跟随知识库 Vault'}
+              </span>
+              <button className="assistant-btn" onClick={() => void handlePickWorkingDir()}>
+                选择…
+              </button>
+              {workingDir && (
+                <button className="assistant-btn" onClick={handleResetWorkingDir}>
+                  恢复默认
+                </button>
+              )}
+            </div>
+          </div>
+
+          {models.map((m, idx) => (
+            // key 用 index：name 可编辑，作 key 会在改名时重建组件丢失焦点
+            <div key={idx} className="assistant-model-card">
               <div className="assistant-model-head">
                 <input
                   className="assistant-model-name"
                   value={m.name}
-                  onChange={(e) => updateModel({ ...m, name: e.target.value })}
+                  onChange={(e) => updateModel(m.name, { name: e.target.value })}
                   placeholder="名称"
                 />
                 <button
@@ -183,8 +212,7 @@ export function SettingsWorkspace() {
                   <select
                     value={m.provider}
                     onChange={(e) =>
-                      updateModel({
-                        ...m,
+                      updateModel(m.name, {
                         provider: e.target.value as AssistantModelConfig['provider'],
                         apiUrl:
                           e.target.value === 'ollama'
@@ -204,7 +232,7 @@ export function SettingsWorkspace() {
                   模型
                   <input
                     value={m.model}
-                    onChange={(e) => updateModel({ ...m, model: e.target.value })}
+                    onChange={(e) => updateModel(m.name, { model: e.target.value })}
                     placeholder="qwen2.5:7b / gpt-4o-mini"
                   />
                 </label>
@@ -212,7 +240,7 @@ export function SettingsWorkspace() {
                   API 端点
                   <input
                     value={m.apiUrl}
-                    onChange={(e) => updateModel({ ...m, apiUrl: e.target.value })}
+                    onChange={(e) => updateModel(m.name, { apiUrl: e.target.value })}
                     placeholder="http://localhost:11434/v1"
                   />
                 </label>
@@ -222,7 +250,7 @@ export function SettingsWorkspace() {
                     <input
                       type="password"
                       value={m.apiKey}
-                      onChange={(e) => updateModel({ ...m, apiKey: e.target.value })}
+                      onChange={(e) => updateModel(m.name, { apiKey: e.target.value })}
                       placeholder="sk-..."
                     />
                   </label>
@@ -235,7 +263,7 @@ export function SettingsWorkspace() {
                     max="2"
                     step="0.1"
                     value={m.temperature}
-                    onChange={(e) => updateModel({ ...m, temperature: parseFloat(e.target.value) })}
+                    onChange={(e) => updateModel(m.name, { temperature: parseFloat(e.target.value) })}
                   />
                 </label>
                 <label>
@@ -245,7 +273,7 @@ export function SettingsWorkspace() {
                     value={m.maxOutputTokens}
                     min="256"
                     max="32768"
-                    onChange={(e) => updateModel({ ...m, maxOutputTokens: parseInt(e.target.value) || 2048 })}
+                    onChange={(e) => updateModel(m.name, { maxOutputTokens: parseInt(e.target.value) || 2048 })}
                   />
                 </label>
               </div>

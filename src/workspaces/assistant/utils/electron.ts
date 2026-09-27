@@ -6,6 +6,8 @@ export interface AssistantBridge {
     models: AssistantModelConfig[]
     schedulerEnabled?: boolean
     approvalEnabled?: boolean
+    /** 工作目录（缺省跟随知识库 Vault）；会话/任务存于该目录下 */
+    workingDir?: string
     /** 注入的工具箱工具名（缺省注册全部 toolbox_*） */
     extraToolNames?: string[]
     /** 三段式权限清单（切片 E）：needsApproval 强制审批，disabled 不注册 */
@@ -25,15 +27,17 @@ export interface AssistantBridge {
   setApprovalMode: (enabled: boolean) => Promise<{ success: boolean; enabled?: boolean; error?: string }>
   /** 审批墙：对一次审批请求回应批准/拒绝（切片 D） */
   approvalResponse: (id: string, approved: boolean) => Promise<{ success: boolean; error?: string }>
-  /** 会话历史（切片 F）：Trajectory 事件流查看 */
-  historyList: () => Promise<{
+  /** 工作目录：弹出系统对话框选择（返回 canceled/path） */
+  pickWorkingDir: () => Promise<{ success: boolean; canceled: boolean; path: string }>
+  /** 会话历史（切片 F）：Trajectory 事件流查看；workingDir 缺省跟随知识库 Vault */
+  historyList: (workingDir?: string) => Promise<{
     success: boolean
     error?: string
     sessions: { sessionId: string; file: string; mtimeMs: number; size: number }[]
   }>
-  historyRead: (file: string) => Promise<{ success: boolean; error?: string; events: AssistantHistoryEvent[] }>
-  historyDelete: (file: string) => Promise<{ success: boolean; error?: string }>
-  historySearch: (query: string) => Promise<{
+  historyRead: (file: string, workingDir?: string) => Promise<{ success: boolean; error?: string; events: AssistantHistoryEvent[] }>
+  historyDelete: (file: string, workingDir?: string) => Promise<{ success: boolean; error?: string }>
+  historySearch: (query: string, workingDir?: string) => Promise<{
     success: boolean
     error?: string
     results: { sessionId: string; file: string; mtimeMs: number; hits: { timestamp: string; type: string; snippet: string }[] }[]
@@ -63,6 +67,7 @@ const mockAssistant: AssistantBridge = {
   providers: () => Promise.resolve([]),
   setApprovalMode: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手' }),
   approvalResponse: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手' }),
+  pickWorkingDir: () => Promise.resolve({ success: false, canceled: true, path: '' }),
   historyList: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', sessions: [] }),
   historyRead: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', events: [] }),
   historyDelete: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手' }),

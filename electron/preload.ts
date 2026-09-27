@@ -162,6 +162,8 @@ const api = {
       }>
       schedulerEnabled?: boolean
       approvalEnabled?: boolean
+      /** 工作目录（缺省跟随知识库 Vault）；会话/任务存于该目录下 */
+      workingDir?: string
       /** 注入的工具箱工具名（缺省注册全部 toolbox_*） */
       extraToolNames?: string[]
       /** 三段式权限清单（切片 E）：needsApproval 强制审批，disabled 不注册 */
@@ -182,11 +184,16 @@ const api = {
     /** 审批墙：对一次审批请求回应批准/拒绝（切片 D） */
     approvalResponse: (id: string, approved: boolean) =>
       ipcRenderer.invoke('assistant:approvalResponse', id, approved),
-    // 会话历史（切片 F）
-    historyList: () => ipcRenderer.invoke('assistant:history:list'),
-    historyRead: (file: string) => ipcRenderer.invoke('assistant:history:read', file),
-    historyDelete: (file: string) => ipcRenderer.invoke('assistant:history:delete', file),
-    historySearch: (query: string) => ipcRenderer.invoke('assistant:history:search', query),
+    // 工作目录：弹出系统对话框选择（返回 canceled/path）
+    pickWorkingDir: () => ipcRenderer.invoke('assistant:pickWorkingDir'),
+    // 会话历史（切片 F）：workingDir 缺省跟随知识库 Vault
+    historyList: (workingDir?: string) => ipcRenderer.invoke('assistant:history:list', workingDir),
+    historyRead: (file: string, workingDir?: string) =>
+      ipcRenderer.invoke('assistant:history:read', file, workingDir),
+    historyDelete: (file: string, workingDir?: string) =>
+      ipcRenderer.invoke('assistant:history:delete', file, workingDir),
+    historySearch: (query: string, workingDir?: string) =>
+      ipcRenderer.invoke('assistant:history:search', query, workingDir),
     // 技能预设进阶（切片 H.2）
     toolsList: () => ipcRenderer.invoke('assistant:tools:list'),
     setToolFilter: (names: string[] | null) => ipcRenderer.invoke('assistant:setToolFilter', names),

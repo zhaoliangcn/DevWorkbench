@@ -1,5 +1,6 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, dialog } from 'electron'
 import path from 'node:path'
+import { promises as fsp } from 'node:fs'
 // dev-assistant-ts 的 exports["."].default 指向 CLI 入口 dist/main.js（commander，无 App 导出），
 // 而 types 指向 dist/app.d.ts —— 包内 types 与运行时入口不一致。
 // 这里绕过 exports 映射，按相对路径直接加载真实 ESM 模块 dist/app.js
@@ -64,6 +65,8 @@ export interface AssistantStartInput {
   models: AssistantModelInput[]
   schedulerEnabled?: boolean
   approvalEnabled?: boolean
+  /** 工作目录（缺省跟随知识库 Vault）；会话/任务存于该目录下 */
+  workingDir?: string
   /** 追加禁用的工具名（在默认安全裁剪之上） */
   extraDisabledTools?: string[]
   /** 注入的工具箱工具名（缺省注册全部 toolbox_*） */
@@ -207,6 +210,24 @@ function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
+/**
+ * 工作目录解析：显式设置优先（须存在且为目录），否则跟随知识库 Vault。
+ * 会话存储（.dev-assistant-store）与 Agent 的文件操作均以此目录为根。
+ */
+async function resolveWorkingDir(
+  explicit?: string
+): Promise<{ dir: string | null; error?: string }> {
+  const candidate = explicit?.trim() || getVaultPath() || ''
+  if (!candidate) return { dir: null, error: '未设置工作目录，且尚未选择知识库文件夹' }
+  try {
+    const st = await fsp.stat(candidate)
+    if (!st.isDirectory()) return { dir: null, error: `工作目录不是文件夹: ${candidate}` }
+  } catch {
+    return { dir: null, error: `工作目录不存在: ${candidate}` }
+  }
+  return { dir: candidate }
+}
+
 function broadcast(e: unknown) {
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send('assistant:events', e)
@@ -228,9 +249,9 @@ function registerAssistantIpc() {
   ipcMain.handle(
     'assistant:start',
     async (_event, options: AssistantStartInput): Promise<{ success: boolean; error?: string; status: AssistantStatus | null }> => {
-      const workingDir = getVaultPath()
-      if (!workingDir) {
-        return { success: false, error: '尚未选择知识库文件夹', status: null }
+      const working = await resolveWorkingDir(options.workingDir)
+      if (!working.dir) {
+        return { success: false, error: working.error, status: null }
       }
       if (!Array.isArray(options.models) || options.models.length === 0) {
         return { success: false, error: '未配置任何模型', status: null }
@@ -247,7 +268,7 @@ function registerAssistantIpc() {
           ...(options.extraDisabledTools ?? []),
         ]
         const next = await App.create({
-          workingDir,
+          workingDir: working.dir,
           models: options.models,
           approvalEnabled: options.approvalEnabled ?? false,
           schedulerEnabled: options.schedulerEnabled ?? true,
@@ -331,39 +352,50 @@ function registerAssistantIpc() {
     return { success: true }
   })
 
+  // ---------- 工作目录（附录 B.7 后续改进：助手工作目录可设置） ----------
+
+  ipcMain.handle('assistant:pickWorkingDir', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择 AI 助手工作目录',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, canceled: true, path: '' }
+    }
+    return { success: true, canceled: false, path: result.filePaths[0] }
+  })
+
   // ---------- 会话历史（切片 F，C.8 dsh 借鉴：Trajectory 事件流查看） ----------
 
   /** 会话存储目录：dev-assistant-ts SessionStore 约定 workingDir/.dev-assistant-store */
-  function isSafeSessionFile(file: string): boolean {
-    const workingDir = getVaultPath()
-    if (!workingDir) return false
-    const storeDir = path.resolve(workingDir, '.dev-assistant-store')
-    const resolved = path.resolve(file)
-    return resolved.startsWith(storeDir + path.sep) && resolved.endsWith('.jsonl')
+  async function isSafeSessionFile(file: string, workingDir?: string): Promise<boolean> {
+    const resolved = await resolveWorkingDir(workingDir)
+    if (!resolved.dir) return false
+    const storeDir = path.resolve(resolved.dir, '.dev-assistant-store')
+    const abs = path.resolve(file)
+    return abs.startsWith(storeDir + path.sep) && abs.endsWith('.jsonl')
   }
 
-  ipcMain.handle('assistant:history:list', () => {
+  ipcMain.handle('assistant:history:list', (_event, workingDir?: string) => {
     try {
-      const workingDir = getVaultPath()
-      if (!workingDir) return { success: false, error: '尚未选择知识库文件夹', sessions: [] }
-      return { success: true, sessions: SessionStore.listSessions(workingDir) }
+      return { success: true, sessions: SessionStore.listSessions(workingDir ?? getVaultPath() ?? '') }
     } catch (e) {
       return { success: false, error: errMessage(e), sessions: [] }
     }
   })
 
-  ipcMain.handle('assistant:history:read', async (_event, file: string) => {
+  ipcMain.handle('assistant:history:read', async (_event, file: string, workingDir?: string) => {
     try {
-      if (!isSafeSessionFile(file)) return { success: false, error: '非法会话路径', events: [] }
+      if (!(await isSafeSessionFile(file, workingDir))) return { success: false, error: '非法会话路径', events: [] }
       return { success: true, events: await SessionStore.readEvents(file) }
     } catch (e) {
       return { success: false, error: errMessage(e), events: [] }
     }
   })
 
-  ipcMain.handle('assistant:history:delete', (_event, file: string) => {
+  ipcMain.handle('assistant:history:delete', async (_event, file: string, workingDir?: string) => {
     try {
-      if (!isSafeSessionFile(file)) return { success: false, error: '非法会话路径' }
+      if (!(await isSafeSessionFile(file, workingDir))) return { success: false, error: '非法会话路径' }
       SessionStore.deleteSession(file)
       return { success: true }
     } catch (e) {
@@ -372,13 +404,13 @@ function registerAssistantIpc() {
   })
 
   // B.3.4 跨会话检索：遍历 trajectory 事件，命中内容片段（每会话 ≤5 条、总共 ≤30 条会话）
-  ipcMain.handle('assistant:history:search', async (_event, query: string) => {
+  ipcMain.handle('assistant:history:search', async (_event, query: string, workingDir?: string) => {
     try {
-      const workingDir = getVaultPath()
-      if (!workingDir) return { success: false, error: '尚未选择知识库文件夹', results: [] }
+      const resolved = await resolveWorkingDir(workingDir)
+      if (!resolved.dir) return { success: false, error: resolved.error, results: [] }
       const q = query.trim().toLowerCase()
       if (!q) return { success: true, results: [] }
-      const sessions = SessionStore.listSessions(workingDir)
+      const sessions = SessionStore.listSessions(resolved.dir)
       const results: {
         sessionId: string
         file: string
