@@ -13,10 +13,24 @@ const api = {
     getPath: () => ipcRenderer.invoke('vault:getPath'),
     getName: () => ipcRenderer.invoke('vault:getName'),
     select: () => ipcRenderer.invoke('vault:select'),
+    /** vault 监听（附录 E E.3.6）：外部文件变更推送；返回取消订阅函数 */
+    onChanged: (callback: (change: { relPath: string; kind: 'add' | 'change' | 'unlink' }) => void) => {
+      const listener = (_event: unknown, change: { relPath: string; kind: 'add' | 'change' | 'unlink' }) =>
+        callback(change)
+      ipcRenderer.on('vault:changed', listener)
+      return () => ipcRenderer.removeListener('vault:changed', listener)
+    },
+  },
+  trash: {
+    list: () => ipcRenderer.invoke('trash:list') as Promise<{ relPath: string; name: string; mtime: number }[]>,
+    restore: (relPath: string) => ipcRenderer.invoke('trash:restore', relPath) as Promise<{ path: string }>,
+    purge: (relPath: string) => ipcRenderer.invoke('trash:purge', relPath),
   },
   file: {
     read: (relativePath: string) => ipcRenderer.invoke('file:read', relativePath),
     write: (relativePath: string, content: string) => ipcRenderer.invoke('file:write', relativePath, content),
+    writeBinary: (relativePath: string, base64: string) => ipcRenderer.invoke('file:writeBinary', relativePath, base64),
+    readBinary: (relativePath: string) => ipcRenderer.invoke('file:readBinary', relativePath),
     delete: (relativePath: string) => ipcRenderer.invoke('file:delete', relativePath),
     list: () => ipcRenderer.invoke('file:list'),
     export: (relativePath: string, content: string) => ipcRenderer.invoke('file:export', relativePath, content),

@@ -1,11 +1,74 @@
 import { app, dialog, ipcMain, BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
+import chokidar from 'chokidar'
+import type { FSWatcher } from 'chokidar'
 import { setVaultPath } from '../api-server.js'
 
 let vaultPath: string | null = null
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'vault-config.json')
+
+/* ---------- vault 监听（附录 E E.3.6） ---------- */
+
+let watcher: FSWatcher | null = null
+
+/** 自写文件时间戳：静默窗口内的事件是自己的落盘回声，不推送（防回环） */
+const recentWrites = new Map<string, number>()
+const WRITE_ECHO_WINDOW_MS = 1500
+
+/** 落盘时打标：file.ts 的写入/移动/删除操作都要调用 */
+function markWrite(relativePath: string) {
+  recentWrites.set(relativePath, Date.now())
+}
+
+function isOwnEcho(relativePath: string): boolean {
+  const ts = recentWrites.get(relativePath)
+  if (ts === undefined) return false
+  if (Date.now() - ts > WRITE_ECHO_WINDOW_MS) {
+    recentWrites.delete(relativePath)
+    return false
+  }
+  return true
+}
+
+function broadcastChanged(relPath: string, kind: 'add' | 'change' | 'unlink') {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send('vault:changed', { relPath, kind })
+  }
+}
+
+function relayChange(full: string, kind: 'add' | 'change' | 'unlink') {
+  if (!vaultPath) return
+  const relPath = path.relative(vaultPath, full).split(path.sep).join('/')
+  // trash/ 是自己的回收站、attachments/ 二进制附件由 dataURL 缓存管理，都不推
+  if (relPath.startsWith('trash/') || relPath.startsWith('attachments/')) return
+  if (kind !== 'unlink' && isOwnEcho(relPath)) return
+  if (kind === 'unlink') recentWrites.delete(relPath)
+  broadcastChanged(relPath, kind)
+}
+
+function startVaultWatcher() {
+  void watcher?.close()
+  watcher = null
+  if (!vaultPath) return
+
+  watcher = chokidar.watch(vaultPath, {
+    ignoreInitial: true,
+    ignorePermissionErrors: true,
+    awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
+  })
+
+  watcher
+    .on('add', (full) => relayChange(full, 'add'))
+    .on('change', (full) => relayChange(full, 'change'))
+    .on('unlink', (full) => relayChange(full, 'unlink'))
+    .on('error', () => {
+      // 监听失败静默降级：仍可重开 vault 全量加载
+    })
+}
+
+/* ---------- vault 目录 ---------- */
 
 function loadVaultConfig(): string | null {
   try {
@@ -87,8 +150,9 @@ function registerVaultIpc() {
     vaultPath = result.filePaths[0]
     saveVaultConfig(vaultPath)
     setVaultPath(vaultPath)
+    startVaultWatcher() // 换 vault 重建监听
     return { path: vaultPath, name: path.basename(vaultPath) }
   })
 }
 
-export { ensureVault, resolveSafe, getVaultPath, registerVaultIpc }
+export { ensureVault, resolveSafe, getVaultPath, registerVaultIpc, markWrite, startVaultWatcher }

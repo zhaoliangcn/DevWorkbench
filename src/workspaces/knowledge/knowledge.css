@@ -868,6 +868,118 @@
   border-color: var(--accent-color);
 }
 
+.tag-chip-count {
+  margin-left: 5px;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: inherit;
+}
+
+/* Outline（附录 E E.3.5） */
+.outline-panel {
+  padding: 12px;
+}
+
+.outline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.outline-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.outline-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.outline-level {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.outline-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 编辑器状态栏（附录 E E.3.5） */
+.editor-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+/* 预览区附件图片自适应（附录 E E.3.5） */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+/* 回收站（附录 E E.3.6） */
+.trash-panel {
+  padding: 12px;
+}
+
+.trash-item {
+  justify-content: space-between;
+}
+
+.trash-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.trash-item-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trash-item-path {
+  font-size: 10px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trash-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 /* Graph */
 .graph-container {
   position: relative;

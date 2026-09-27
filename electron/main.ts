@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadApiConfig } from './api-config.js'
 import { startApiServer, stopApiServer, setVaultPath } from './api-server.js'
-import { ensureVault, registerVaultIpc, getVaultPath } from './ipc/vault.js'
+import { ensureVault, registerVaultIpc, getVaultPath, startVaultWatcher } from './ipc/vault.js'
 import { registerFileIpc } from './ipc/file.js'
 import { registerDirIpc } from './ipc/dir.js'
 import { registerToolboxIpc } from './ipc/index.js'
@@ -48,6 +48,7 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   await ensureVault()
+  startVaultWatcher() // vault 监听（附录 E E.3.6）：外部变更 → vault:changed 推送
 
   // 注册各命名空间的 IPC handler
   registerVaultIpc()

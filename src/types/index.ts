@@ -29,7 +29,15 @@ export interface Link {
   target: string
 }
 
-export type RightPanelTab = 'backlinks' | 'search' | 'tags' | 'graph' | 'ai' | 'mindmap'
+export type RightPanelTab =
+  | 'backlinks'
+  | 'search'
+  | 'tags'
+  | 'outline'
+  | 'graph'
+  | 'ai'
+  | 'mindmap'
+  | 'trash'
 export type EditorMode = 'edit' | 'preview' | 'split'
 export type Theme = 'light' | 'dark'
 

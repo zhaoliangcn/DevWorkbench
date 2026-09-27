@@ -4,10 +4,12 @@ import type { RightPanelTab } from '../../../types'
 import BacklinksPanel from '../panels/BacklinksPanel'
 import SearchPanel from '../panels/SearchPanel'
 import TagsPanel from '../panels/TagsPanel'
+import OutlinePanel from '../panels/OutlinePanel'
+import TrashPanel from '../panels/TrashPanel'
 import GraphView from '../panels/GraphView'
 import MindMapView from '../panels/MindMapView'
 import AiPanel from '../panels/AiPanel'
-import { Link2, Search, Tag, GitGraph, Sparkles, GitFork } from 'lucide-react'
+import { Link2, Search, Tag, GitGraph, Sparkles, GitFork, List, Trash2 } from 'lucide-react'
 
 const MIN_WIDTH = 200
 const MAX_WIDTH = 800
@@ -17,9 +19,11 @@ const tabs: { id: RightPanelTab; label: string; icon: React.ReactNode }[] = [
   { id: 'backlinks', label: '链接', icon: <Link2 size={14} /> },
   { id: 'search', label: '搜索', icon: <Search size={14} /> },
   { id: 'tags', label: '标签', icon: <Tag size={14} /> },
+  { id: 'outline', label: '大纲', icon: <List size={14} /> },
   { id: 'graph', label: '图谱', icon: <GitGraph size={14} /> },
   { id: 'mindmap', label: '导图', icon: <GitFork size={14} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={14} /> },
+  { id: 'trash', label: '回收站', icon: <Trash2 size={14} /> },
 ]
 
 export default function RightPanel() {
@@ -83,9 +87,11 @@ export default function RightPanel() {
           {rightPanelTab === 'backlinks' && <BacklinksPanel />}
           {rightPanelTab === 'search' && <SearchPanel />}
           {rightPanelTab === 'tags' && <TagsPanel />}
+          {rightPanelTab === 'outline' && <OutlinePanel />}
           {rightPanelTab === 'graph' && <GraphView />}
           {rightPanelTab === 'mindmap' && <MindMapView />}
           {rightPanelTab === 'ai' && <AiPanel />}
+          {rightPanelTab === 'trash' && <TrashPanel />}
         </div>
       </div>
     </div>
