@@ -38,6 +38,7 @@ export type RightPanelTab =
   | 'mindmap'
   | 'board'
   | 'calendar'
+  | 'review'
   | 'ai'
   | 'trash'
 export type EditorMode = 'edit' | 'preview' | 'split'

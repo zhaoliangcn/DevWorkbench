@@ -1826,3 +1826,191 @@
   border-radius: 50%;
   background: var(--color-primary, #7aa2f7);
 }
+
+/* ===== 附录 B.5.4：间隔重复复习面板 ===== */
+
+.review-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.review-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-stat {
+  color: var(--text-secondary, inherit);
+}
+
+.review-stat b {
+  color: var(--color-primary, #7aa2f7);
+}
+
+.review-start {
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-primary, #7aa2f7);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.review-start:hover {
+  filter: brightness(1.1);
+}
+
+.review-clear {
+  text-align: center;
+  padding: 8px 0;
+  opacity: 0.7;
+}
+
+.review-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.review-deck-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.35));
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.review-deck-item:hover {
+  border-color: var(--color-primary, #7aa2f7);
+}
+
+.review-deck-item.due {
+  border-left: 3px solid var(--color-primary, #7aa2f7);
+}
+
+.review-deck-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-deck-meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-secondary, inherit);
+  white-space: nowrap;
+}
+
+.review-progress {
+  font-size: 11px;
+  color: var(--text-secondary, inherit);
+}
+
+.review-source {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary, #7aa2f7);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  min-height: 90px;
+  white-space: pre-wrap;
+}
+
+.review-q {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.review-a {
+  border-top: 1px dashed var(--border-color, rgba(127, 127, 127, 0.4));
+  padding-top: 8px;
+}
+
+.review-a-empty {
+  opacity: 0.5;
+}
+
+.review-reveal,
+.review-next {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.4));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.review-reveal:hover,
+.review-next:hover {
+  border-color: var(--color-primary, #7aa2f7);
+}
+
+.review-grades {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.review-grade {
+  padding: 6px 0;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.4));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.review-grade:hover {
+  border-color: var(--color-primary, #7aa2f7);
+}
+
+.review-grade.grade-again:hover {
+  color: #f7768e;
+  border-color: #f7768e;
+}
+
+.review-grade.grade-easy:hover {
+  color: #9ece6a;
+  border-color: #9ece6a;
+}
+
+.review-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 0;
+}
+
+.review-done-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.review-done-sub {
+  color: var(--text-secondary, inherit);
+}
