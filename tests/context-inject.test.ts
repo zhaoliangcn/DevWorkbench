@@ -44,4 +44,31 @@ describe('buildPinnedContext', () => {
     expect(out).toContain('- empty.md')
     expect(out).toContain('预览: ')
   })
+
+  it('回链摘要：被引用标题列出（附录 E E.3.7）', () => {
+    const out = buildPinnedContext(
+      [{ path: 'a.md', content: 'A', backlinks: ['笔记乙', '笔记丙'] }],
+      'q',
+    )
+    expect(out).toContain('被引用: 笔记乙、笔记丙')
+  })
+
+  it('回链超过 3 条截断（≤3）', () => {
+    const out = buildPinnedContext(
+      [{ path: 'a.md', content: 'A', backlinks: ['一', '二', '三', '四', '五'] }],
+      'q',
+    )
+    expect(out).toContain('被引用: 一、二、三')
+    expect(out).not.toContain('四')
+  })
+
+  it('无回链时不输出被引用行', () => {
+    const out = buildPinnedContext([{ path: 'solo.md', content: 'S' }], 'q')
+    expect(out).not.toContain('被引用')
+  })
+
+  it('注入 knowledge_search_notes 检索提示', () => {
+    const out = buildPinnedContext([{ path: 'a.md', content: 'A' }], 'q')
+    expect(out).toContain('knowledge_search_notes')
+  })
 })

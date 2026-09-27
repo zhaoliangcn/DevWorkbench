@@ -1,5 +1,6 @@
-// C.5 进阶版测试：knowledge_read_note 工具（主进程）
-// 覆盖：正常读取、子目录、路径越界拒绝、文件不存在、目录、长文截断、offsetChars 分段、缺参、vault 未设置
+// C.5 进阶版测试：knowledge_read_note / knowledge_search_notes 工具（主进程）
+// 覆盖：正常读取、子目录、路径越界拒绝、文件不存在、目录、长文截断、offsetChars 分段、缺参、vault 未设置；
+// 搜索：得分排序（标题×3）、片段、trash 跳过、limit 截断、缺参、零命中
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
@@ -11,7 +12,7 @@ vi.mock('../electron/ipc/vault.js', () => ({
   getVaultPath: () => state.vaultDir,
 }))
 
-import { knowledgeReadNoteHandler } from '../electron/ipc/knowledge-tools'
+import { knowledgeReadNoteHandler, knowledgeSearchNotesHandler } from '../electron/ipc/knowledge-tools'
 
 type HandlerFn = (args: { arguments: Record<string, unknown> }) => Promise<{
   success: boolean
@@ -19,6 +20,7 @@ type HandlerFn = (args: { arguments: Record<string, unknown> }) => Promise<{
 }>
 
 const handler = knowledgeReadNoteHandler as unknown as HandlerFn
+const searchHandler = knowledgeSearchNotesHandler as unknown as HandlerFn
 
 const BIG_LEN = 25000
 
@@ -31,6 +33,11 @@ beforeAll(async () => {
   await fs.mkdir(path.join(tmpDir, 'nested'))
   await fs.writeFile(path.join(tmpDir, 'nested', 'inner.md'), 'inner text', 'utf8')
   await fs.writeFile(path.join(tmpDir, 'big.md'), 'x'.repeat(BIG_LEN), 'utf8')
+  // 搜索用例数据：标题命中（4 分）vs 正文命中（1 分）vs 回收站（应跳过）
+  await fs.writeFile(path.join(tmpDir, 'json-guide.md'), '关于 JSON 的指南，纯文本无其他', 'utf8')
+  await fs.writeFile(path.join(tmpDir, 'misc.md'), '正文提到 json 一次', 'utf8')
+  await fs.mkdir(path.join(tmpDir, 'trash'), { recursive: true })
+  await fs.writeFile(path.join(tmpDir, 'trash', 'junk.md'), 'json in trash', 'utf8')
 })
 
 afterAll(async () => {
@@ -119,5 +126,65 @@ describe('knowledge_read_note 长文分段', () => {
     expect(r.content).toContain('从偏移 24000 开始')
     expect(r.content).not.toContain('已截断')
     expect(r.content.replace('（从偏移 24000 开始）', '').length).toBe(BIG_LEN - 24000)
+  })
+})
+
+describe('knowledge_search_notes（附录 E E.3.7）', () => {
+  it('标题命中权重高于正文命中，回收站被跳过', async () => {
+    const r = await searchHandler({ arguments: { query: 'json' } })
+    expect(r.success).toBe(true)
+    const guideIdx = r.content.indexOf('json-guide.md')
+    const miscIdx = r.content.indexOf('misc.md')
+    expect(guideIdx).toBeGreaterThan(-1)
+    expect(miscIdx).toBeGreaterThan(guideIdx) // 标题×3+正文 排在纯正文前
+    expect(r.content).not.toContain('trash/junk.md')
+    expect(r.content).toContain('knowledge_read_note')
+  })
+
+  it('返回命中片段', async () => {
+    const r = await searchHandler({ arguments: { query: 'json' } })
+    expect(r.content).toContain('片段:')
+    expect(r.content).toContain('JSON')
+  })
+
+  it('limit 截断并提示总数', async () => {
+    const r = await searchHandler({ arguments: { query: 'json', limit: 1 } })
+    expect(r.success).toBe(true)
+    expect(r.content).toContain('仅列前 1 条')
+    expect(r.content).toContain('共 2 篇命中')
+  })
+
+  it('frontmatter tags 行参与标签匹配', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'tagged.md'),
+      '---\ntags: [postgres]\n---\n正文没有关键词',
+      'utf8',
+    )
+    const r = await searchHandler({ arguments: { query: 'postgres' } })
+    expect(r.success).toBe(true)
+    expect(r.content).toContain('tagged.md')
+  })
+
+  it('零命中给出未找到提示', async () => {
+    const r = await searchHandler({ arguments: { query: '不存在的关键词xyz' } })
+    expect(r.success).toBe(true)
+    expect(r.content).toContain('未找到')
+  })
+
+  it('缺少 query 参数 → 失败', async () => {
+    const r = await searchHandler({ arguments: {} })
+    expect(r.success).toBe(false)
+    expect(r.content).toContain('缺少 query')
+  })
+
+  it('vault 未设置 → 提示未选择', async () => {
+    state.vaultDir = null
+    try {
+      const r = await searchHandler({ arguments: { query: 'x' } })
+      expect(r.success).toBe(false)
+      expect(r.content).toContain('尚未选择知识库')
+    } finally {
+      state.vaultDir = tmpDir
+    }
   })
 })

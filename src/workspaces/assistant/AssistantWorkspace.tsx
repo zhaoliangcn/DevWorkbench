@@ -34,12 +34,23 @@ export function AssistantWorkspace() {
   const approvalEnabled = useAssistantStore((s) => s.approvalEnabled)
   const setApprovalEnabled = useAssistantStore((s) => s.setApprovalEnabled)
 
-  // 知识库钉选上下文（切片 D，设计 C.5）
+  // 知识库钉选上下文（切片 D，设计 C.5；回链摘要见附录 E E.3.7）
   const pinnedIds = useKnowledgeStore((s) => s.pinnedForAssistant)
   const knowledgeNotes = useKnowledgeStore((s) => s.notes)
+  const getBacklinks = useKnowledgeStore((s) => s.getBacklinks)
   const togglePinForAssistant = useKnowledgeStore((s) => s.togglePinForAssistant)
   const pinnedNotes = pinnedIds
-    .map((id) => knowledgeNotes[id])
+    .map((id) => {
+      const note = knowledgeNotes[id]
+      if (!note) return null
+      return {
+        ...note,
+        // 反向链接标题摘要（≤3 条，附录 E E.3.7）：助手可感知笔记在知识网络中的位置
+        backlinks: getBacklinks(id)
+          .map((l) => knowledgeNotes[l.source]?.title)
+          .filter((t): t is string => Boolean(t)),
+      }
+    })
     .filter((n): n is NonNullable<typeof n> => Boolean(n))
 
   const [input, setInput] = useState('')
