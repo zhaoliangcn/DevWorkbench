@@ -70,6 +70,53 @@ const api = {
     killProcess: (pid: number) => ipcRenderer.invoke('system:killProcess', pid),
     checkMirror: (url: string) => ipcRenderer.invoke('system:checkMirror', url),
   },
+  http: {
+    /** 附录 F F.2：HTTP 请求经主进程发出（绕 CORS），二进制响应 base64 回传 */
+    request: (args: { url: string; method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }) =>
+      ipcRenderer.invoke('http:request', args),
+  },
+  webhook: {
+    /** 附录 F F.3：Webhook 接收器 */
+    list: () => ipcRenderer.invoke('webhook:list'),
+    setEnabled: (enabled: boolean) => ipcRenderer.invoke('webhook:setEnabled', enabled),
+    clear: () => ipcRenderer.invoke('webhook:clear'),
+    onReceived: (callback: (ev: unknown) => void) => {
+      const listener = (_event: unknown, ev: unknown) => callback(ev)
+      ipcRenderer.on('webhook:received', listener)
+      return () => ipcRenderer.removeListener('webhook:received', listener)
+    },
+  },
+  cron: {
+    /** 附录 F F.4b：Cron 触发调度器（HTTP/脚本目标；Agent 目标 F.4c 接入） */
+    getTasks: () => ipcRenderer.invoke('cron:tasks:get'),
+    setTasks: (tasks: unknown[]) => ipcRenderer.invoke('cron:tasks:set', tasks),
+    trigger: (taskId: string) => ipcRenderer.invoke('cron:trigger', taskId),
+    clearLogs: () => ipcRenderer.invoke('cron:logs:clear'),
+    onLog: (callback: (entry: unknown) => void) => {
+      const listener = (_event: unknown, entry: unknown) => callback(entry)
+      ipcRenderer.on('cron:log', listener)
+      return () => ipcRenderer.removeListener('cron:log', listener)
+    },
+  },
+  redis: {
+    /** 附录 F F.5：Redis 客户端（ioredis 常驻主进程） */
+    connect: (args: { id: string; host: string; port: number; password?: string; db?: number }) =>
+      ipcRenderer.invoke('redis:connect', args),
+    exec: (id: string, command: string) => ipcRenderer.invoke('redis:exec', id, command),
+    scan: (id: string, cursor: string, match: string, count: number) =>
+      ipcRenderer.invoke('redis:scan', id, cursor, match, count),
+    disconnect: (id: string) => ipcRenderer.invoke('redis:disconnect', id),
+  },
+  sqlite: {
+    /** 附录 F F.6：SQLite 浏览器（better-sqlite3 主进程单例） */
+    check: () => ipcRenderer.invoke('sqlite:check'),
+    open: () => ipcRenderer.invoke('sqlite:open'),
+    tables: () => ipcRenderer.invoke('sqlite:tables'),
+    columns: (table: string) => ipcRenderer.invoke('sqlite:columns', table),
+    rows: (table: string, where: string, page: number) => ipcRenderer.invoke('sqlite:rows', table, where, page),
+    exec: (sql: string) => ipcRenderer.invoke('sqlite:exec', sql),
+    close: () => ipcRenderer.invoke('sqlite:close'),
+  },
   data: {
     save: (key: string, data: unknown) => ipcRenderer.invoke('data:save', key, data),
     load: (key: string) => ipcRenderer.invoke('data:load', key),

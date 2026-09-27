@@ -7,6 +7,11 @@ import { ensureVault, registerVaultIpc, getVaultPath, startVaultWatcher } from '
 import { registerFileIpc } from './ipc/file.js'
 import { registerDirIpc } from './ipc/dir.js'
 import { registerToolboxIpc } from './ipc/index.js'
+import { registerHttpIpc } from './ipc/http.js'
+import { registerWebhookIpc, stopWebhookServer } from './ipc/webhook.js'
+import { registerCronIpc, stopCronScheduler } from './ipc/cron.js'
+import { registerRedisIpc, stopRedisAll } from './ipc/redis.js'
+import { registerSqliteIpc, stopSqlite } from './ipc/sqlite.js'
 import { registerAssistantIpc, stopAssistant } from './ipc/assistant.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -58,6 +63,16 @@ app.whenReady().then(async () => {
   registerDirIpc()
   // Phase 3: 工具箱（ssh/system/data/app）
   registerToolboxIpc()
+  // 附录 F F.2: HTTP 请求下沉主进程（http:request）
+  registerHttpIpc()
+  // 附录 F F.3: Webhook 接收器（webhook:* 命名空间）
+  registerWebhookIpc()
+  // 附录 F F.4b: Cron 触发调度器（cron:* 命名空间，HTTP/脚本目标）
+  registerCronIpc()
+  // 附录 F F.5: Redis 客户端（redis:* 命名空间）
+  registerRedisIpc()
+  // 附录 F F.6: SQLite 浏览器（sqlite:* 命名空间）
+  registerSqliteIpc()
   // Phase 6: AI 助手（assistant:* 命名空间）
   registerAssistantIpc()
 
@@ -84,11 +99,18 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     stopApiServer()
+    stopWebhookServer()
+    stopCronScheduler()
+    void stopRedisAll()
+    stopSqlite()
     app.quit()
   }
 })
 
 app.on('before-quit', () => {
   stopApiServer()
+  stopCronScheduler()
+  void stopRedisAll()
+  stopSqlite()
   void stopAssistant()
 })

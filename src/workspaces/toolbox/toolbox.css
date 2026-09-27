@@ -1740,3 +1740,550 @@
   border-radius: 6px;
   padding: 4px 8px;
 }
+
+/* ---------- 附录 F F.1：接口调试 集合/环境/断言 ---------- */
+
+.tb-root .api-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-root .api-toolbar select {
+  max-width: 140px;
+}
+
+.tb-root .api-missing-warn {
+  font-size: 12px;
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 40%, transparent);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.tb-root .api-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-top: 10px;
+}
+
+.tb-root .api-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.tb-root .api-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--color-primary, #22d3ee);
+}
+
+.tb-root .api-env-panel,
+.tb-root .api-assert-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.tb-root .api-assert-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-root .api-assert-row select {
+  flex: 0 0 110px;
+}
+
+.tb-root .api-assert-row input {
+  flex: 1;
+}
+
+.tb-root .assert-chip {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted, var(--text-secondary));
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .assert-chip.pass {
+  color: #34d399;
+  border-color: color-mix(in srgb, #34d399 45%, transparent);
+  background: color-mix(in srgb, #34d399 12%, transparent);
+}
+
+.tb-root .assert-chip.fail {
+  color: #f87171;
+  border-color: color-mix(in srgb, #f87171 45%, transparent);
+  background: color-mix(in srgb, #f87171 12%, transparent);
+}
+
+/* ---------- 附录 F F.3：Webhook 接收器 ---------- */
+
+.tb-root .panel-empty-text {
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.tb-root .webhook-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tb-root .webhook-status .panel-empty-text {
+  flex: 1;
+}
+
+.tb-root .webhook-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--success-color, #4ec9b0);
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--success-color, #4ec9b0) 8%, transparent);
+}
+
+.tb-root .webhook-event {
+  cursor: pointer;
+}
+
+.tb-root .webhook-event-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tb-root .webhook-event-detail {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.tb-root .webhook-pre {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  background: var(--bg-secondary, rgba(128, 128, 128, 0.08));
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  margin: 0 0 8px;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ---------- 附录 F F.4a：Cron 可视化 ---------- */
+
+.tb-root .cron-error {
+  color: var(--error-color, #f87171);
+  font-size: 12px;
+  margin: 6px 0;
+}
+
+.tb-root .cron-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.tb-root .cron-preset {
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
+.tb-root .cron-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  max-width: 480px;
+}
+
+.tb-root .cron-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tb-root .cron-slider-label {
+  flex: 0 0 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .cron-slider-row input[type='range'] {
+  flex: 1;
+}
+
+.tb-root .cron-field-text {
+  flex: 0 0 88px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .cron-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.tb-root .cron-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .cron-preview-item.first {
+  border-color: color-mix(in srgb, var(--accent-color) 55%, transparent);
+}
+
+.tb-root .cron-preview-index {
+  flex: 0 0 20px;
+  text-align: right;
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 12px;
+}
+
+.tb-root .cron-preview-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-root .cron-note {
+  margin-top: 14px;
+}
+
+/* ---------- 附录 F F.4b：Cron 触发任务 ---------- */
+
+.tb-root .cron-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.tb-root .cron-task-item {
+  cursor: default;
+}
+
+.tb-root .cron-task-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tb-root .cron-task-name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.tb-root .cron-task-expr {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .cron-task-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .cron-target-tag {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .cron-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .cron-add-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-root .cron-add-row input,
+.tb-root .cron-add-row select,
+.tb-root .cron-add-row textarea {
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-root .cron-add-row select {
+  flex: 0 0 auto;
+}
+
+.tb-root .cron-name-input {
+  flex: 0 0 160px !important;
+}
+
+.tb-root .cron-expr-input {
+  flex: 0 0 140px !important;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.tb-root .cron-command-input {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  resize: vertical;
+}
+
+.tb-root .cron-clear-logs {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.tb-root .cron-log-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: default;
+}
+
+.tb-root .cron-log-detail {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .cron-log-time {
+  flex: 0 0 auto;
+  color: var(--text-muted, var(--text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 附录 F F.5：Redis 客户端 ---------- */
+
+.tb-root .redis-version {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .form-row-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tb-root .form-row-group .form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-root .form-row-group label {
+  margin-right: 0;
+}
+
+.tb-root .redis-port-input,
+.tb-root .redis-db-input {
+  width: 72px !important;
+  flex: none !important;
+}
+
+.tb-root .redis-result {
+  margin-top: 8px;
+  max-height: 260px;
+}
+
+.tb-root .redis-scan-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-root .redis-scan-bar input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tb-root .redis-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.tb-root .redis-tree-prefix {
+  align-self: flex-start;
+  font-size: 13px;
+}
+
+.tb-root .redis-count {
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 12px;
+}
+
+.tb-root .redis-tree-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 0 4px 16px;
+}
+
+.tb-root .redis-tree-key {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .redis-tree-key.active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.tb-root .redis-ttl {
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .redis-ttl b {
+  color: var(--accent-color);
+}
+
+/* ---------- 附录 F F.6：SQLite 浏览器 ---------- */
+
+.tb-root .sqlite-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-root .sqlite-recent {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .sqlite-table-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tb-root .sqlite-table-btn {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .sqlite-table-btn.active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.tb-root .sqlite-grid-wrap {
+  margin-top: 8px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .sqlite-grid {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+
+.tb-root .sqlite-grid th,
+.tb-root .sqlite-grid td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 4px 8px;
+  text-align: left;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-root .sqlite-grid th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary, var(--bg-color));
+  font-weight: 600;
+}
+
+.tb-root .sqlite-pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+}
