@@ -144,6 +144,14 @@ const api = {
     exec: (sql: string) => ipcRenderer.invoke('sqlite:exec', sql),
     close: () => ipcRenderer.invoke('sqlite:close'),
   },
+  iconconvert: {
+    /** 工具箱：图标格式转换（iconconvert:*，主进程 nativeImage + 纯 JS ICO/ICNS 容器） */
+    open: () => ipcRenderer.invoke('iconconvert:open'),
+    generate: (args: { path: string; target: 'ico' | 'icns' | 'png'; sizes?: number[] }) =>
+      ipcRenderer.invoke('iconconvert:generate', args),
+    save: (args: { items: { name: string; base64: string }[]; defaultDir?: string }) =>
+      ipcRenderer.invoke('iconconvert:save', args),
+  },
   data: {
     save: (key: string, data: unknown) => ipcRenderer.invoke('data:save', key, data),
     load: (key: string) => ipcRenderer.invoke('data:load', key),

@@ -38,6 +38,7 @@ export const TOOLBOX_MODULES: ToolboxModule[] = [
   { id: 'mirror', name: '镜像地址', icon: '🪞', category: 'system' },
   { id: 'cron', name: 'Cron 可视化', icon: '⏰', category: 'system' },
   { id: 'imagetool', name: '图片工具', icon: '🖼️', category: 'file' },
+  { id: 'iconconvert', name: '图标转换', icon: '🎨', category: 'file' },
   { id: 'snippets', name: '代码片段', icon: '📝', category: 'devtools' },
   { id: 'notes', name: '随手记', icon: '💡', category: 'devtools' },
   { id: 'vault', name: '凭据保险库', icon: '🛡️', category: 'settings' },

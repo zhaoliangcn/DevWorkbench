@@ -288,6 +288,30 @@ interface ElectronAPI {
     }>
     close: () => Promise<{ success: boolean }>
   }
+  iconconvert: {
+    /** 工具箱：图标格式转换 */
+    open: () => Promise<
+      | { canceled: true }
+      | {
+          canceled: false
+          path: string
+          name: string
+          size: number
+          format: 'png' | 'jpeg' | 'webp' | 'gif' | 'bmp' | 'ico' | 'icns'
+          width: number
+          height: number
+          previewDataUrl: string
+        }
+    >
+    generate: (args: { path: string; target: 'ico' | 'icns' | 'png'; sizes?: number[] }) => Promise<{
+      items: { name: string; size: number | null; base64: string; dataUrl: string }[]
+      suggestedName: string
+    }>
+    save: (args: { items: { name: string; base64: string }[]; defaultDir?: string }) => Promise<{
+      canceled: boolean
+      saved: string[]
+    }>
+  }
   data: {
     save: (key: string, data: unknown) => Promise<boolean>
     load: (key: string) => Promise<unknown>

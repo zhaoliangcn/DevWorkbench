@@ -25,6 +25,7 @@ import { LogViewerTool } from './tools/LogViewerTool'
 import { MirrorTool } from './tools/MirrorTool'
 import { CronTool } from './tools/CronTool'
 import { ImageTool } from './tools/ImageTool'
+import { IconConvertTool } from './tools/IconConvertTool'
 import { SnippetsModule } from './tools/SnippetsModule'
 import { NotesModule } from './tools/NotesModule'
 import { SystemModule } from './tools/SystemModule'
@@ -72,6 +73,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('mirror', MirrorTool),
   defineToolboxModule('cron', CronTool),
   defineToolboxModule('imagetool', ImageTool),
+  defineToolboxModule('iconconvert', IconConvertTool),
   defineToolboxModule('snippets', SnippetsModule),
   defineToolboxModule('notes', NotesModule),
   defineToolboxModule('system', SystemModule),

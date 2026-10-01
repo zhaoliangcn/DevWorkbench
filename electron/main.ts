@@ -7,6 +7,7 @@ import { ensureVault, registerVaultIpc, getVaultPath, startVaultWatcher } from '
 import { registerFileIpc } from './ipc/file.js'
 import { registerDirIpc } from './ipc/dir.js'
 import { registerToolboxIpc } from './ipc/index.js'
+import { registerIconConvertIpc } from './ipc/icon-convert.js'
 import { registerHttpIpc } from './ipc/http.js'
 import { registerWebhookIpc, stopWebhookServer } from './ipc/webhook.js'
 import { registerCronIpc, stopCronScheduler } from './ipc/cron.js'
@@ -66,6 +67,8 @@ app.whenReady().then(async () => {
   registerDirIpc()
   // Phase 3: 工具箱（ssh/system/data/app）
   registerToolboxIpc()
+  // 工具箱：图标格式转换（iconconvert:*）
+  registerIconConvertIpc()
   // 附录 F F.2: HTTP 请求下沉主进程（http:request）
   registerHttpIpc()
   // 附录 F F.3: Webhook 接收器（webhook:* 命名空间）
