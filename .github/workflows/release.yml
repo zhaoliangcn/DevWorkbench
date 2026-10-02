@@ -46,6 +46,17 @@ jobs:
       - name: 运行测试
         run: npm test
 
+      - name: 预创建 Release（防止 electron-builder 并发上传时重复创建 Release）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${env:GITHUB_REF_NAME}"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --title "DevWorkbench $tag" --generate-notes
+          }
+
       - name: 构建并发布到 GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
