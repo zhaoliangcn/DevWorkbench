@@ -17,6 +17,7 @@
     "electron:start": "concurrently -k \"npm run dev\" \"sleep 2 && npm run electron:dev\"",
     "build": "tsc -b && vite build",
     "electron:build": "npm run build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && electron-builder",
+    "electron:publish": "npm run build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && electron-builder --publish always",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
@@ -80,6 +81,12 @@
     "productName": "DevWorkbench",
     "directories": {
       "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "zhaoliangcn",
+      "repo": "DevWorkbench",
+      "releaseType": "release"
     },
     "files": [
       "dist/**/*",
