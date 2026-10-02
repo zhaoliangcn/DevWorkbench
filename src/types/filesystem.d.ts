@@ -363,6 +363,60 @@ interface ElectronAPI {
     setToolFilter: (names: string[] | null) => Promise<{ success: boolean; error?: string }>
     onEvent: (callback: (e: unknown) => void) => () => void
   }
+  explorer: {
+    /** 开发助手：项目文件浏览与编辑；root+rel 每次传参，主进程校验路径不越界 */
+    pickRoot: () => Promise<{
+      success: boolean
+      canceled: boolean
+      root: string | null
+      name: string | null
+    }>
+    list: (root: string, rel: string) => Promise<{ success: boolean; entries?: ExplorerEntry[]; error?: string }>
+    read: (root: string, rel: string) => Promise<ExplorerReadResult>
+    readBinary: (root: string, rel: string) => Promise<{
+      success: boolean
+      mime?: string
+      base64?: string
+      size?: number
+      mtime?: number
+      error?: string
+    }>
+    write: (root: string, rel: string, content: string) => Promise<{
+      success: boolean
+      size?: number
+      mtime?: number
+      error?: string
+    }>
+    stat: (root: string, rel: string) => Promise<{
+      success: boolean
+      kind?: 'file' | 'dir'
+      size?: number
+      mtime?: number
+      error?: string
+    }>
+    mkdir: (root: string, rel: string) => Promise<{ success: boolean; error?: string }>
+    createFile: (root: string, rel: string) => Promise<{ success: boolean; error?: string }>
+    rename: (root: string, rel: string, newName: string) => Promise<{ success: boolean; error?: string }>
+    delete: (root: string, rel: string) => Promise<{ success: boolean; error?: string }>
+  }
+}
+
+/** explorer:list 目录条目（relPath 相对项目根，'/' 分隔） */
+interface ExplorerEntry {
+  name: string
+  relPath: string
+  kind: 'file' | 'dir'
+  size: number
+}
+
+/** explorer:read 结果：text 可编辑 / binary 二进制（非图片走占位）/ tooLarge 超文本上限 */
+interface ExplorerReadResult {
+  success: boolean
+  kind?: 'text' | 'binary' | 'tooLarge'
+  content?: string
+  size?: number
+  mtime?: number
+  error?: string
 }
 
 interface AssistantStatus {

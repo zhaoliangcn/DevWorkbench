@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock } from 'lucide-react'
+import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock, PanelLeft } from 'lucide-react'
 import { useAssistantStore } from '../../store/assistantStore'
 import { useCrossStore } from '../../store/crossStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
+import { useExplorerStore } from '../../store/explorerStore'
 import { assistantAPI } from './utils/electron'
 import { buildPinnedContext } from './context-inject'
 import { useIsActive } from '../../shared/hooks/useIsActive'
 import { SessionHistory } from './SessionHistory'
 import { TaskBoard } from './TaskBoard'
+import { ExplorerPanel } from './explorer/ExplorerPanel'
+import { EditorPane } from './explorer/EditorPane'
 import './assistant.css'
+import './explorer/explorer.css'
 
 /**
  * AI 助手工作区（Phase 6）：嵌入 dev-assistant-ts 的 Agent 聊天 UI。
@@ -74,6 +78,9 @@ export function AssistantWorkspace() {
   const startedRef = useRef(false)
   const isActive = useIsActive('assistant')
   const logRef = useRef<HTMLDivElement>(null)
+  // 文件面板（explorer）：显隐由 explorerStore 管，跨切换保留
+  const panelVisible = useExplorerStore((s) => s.panelVisible)
+  const togglePanel = useExplorerStore((s) => s.togglePanel)
 
   // 首次进入工作区：刷新状态并按需启动
   useEffect(() => {
@@ -253,6 +260,14 @@ export function AssistantWorkspace() {
           </span>
         </div>
         <div className="assistant-header-right">
+          <button
+            className={`assistant-btn ${panelVisible ? 'assistant-btn-on' : ''}`}
+            onClick={togglePanel}
+            title="切换文件面板：项目目录树 / 文件编辑与预览"
+          >
+            <PanelLeft size={13} />
+            文件
+          </button>
           {models.length > 0 && (
             <select
               value={activeModel}
@@ -307,6 +322,11 @@ export function AssistantWorkspace() {
 
       {error && <div className="assistant-banner-error">{error}</div>}
 
+      <div className="assistant-body">
+        {panelVisible && <ExplorerPanel />}
+        <EditorPane />
+
+        <div className="assistant-chat-col">
       {activeSkill && (
         <div className="assistant-banner-skill">
           <Sparkles size={12} />
@@ -610,6 +630,8 @@ export function AssistantWorkspace() {
             <Send size={15} />
           </button>
         )}
+        </div>
+        </div>
       </div>
 
       {historyOpen && <SessionHistory onClose={() => setHistoryOpen(false)} />}

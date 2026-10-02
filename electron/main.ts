@@ -17,6 +17,7 @@ import { registerAssistantIpc, stopAssistant } from './ipc/assistant.js'
 import { registerDockerIpc } from './ipc/docker.js'
 import { registerEnvfileIpc } from './ipc/envfile.js'
 import { registerSecvaultIpc } from './ipc/secvault.js'
+import { registerExplorerIpc } from './ipc/explorer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -87,6 +88,8 @@ app.whenReady().then(async () => {
   registerEnvfileIpc()
   // 附录 B.7: 凭据保险库（secvault:* 命名空间）
   registerSecvaultIpc()
+  // 开发助手: 项目文件浏览与编辑（explorer:* 命名空间）
+  registerExplorerIpc()
 
   createWindow()
 

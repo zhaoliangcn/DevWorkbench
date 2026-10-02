@@ -211,6 +211,21 @@ const api = {
       return () => ipcRenderer.removeListener('assistant:events', listener)
     },
   },
+  explorer: {
+    /** 开发助手：项目文件浏览与编辑（explorer:*，root+rel 每次传参 + 主进程路径校验） */
+    pickRoot: () => ipcRenderer.invoke('explorer:pickRoot'),
+    list: (root: string, rel: string) => ipcRenderer.invoke('explorer:list', root, rel),
+    read: (root: string, rel: string) => ipcRenderer.invoke('explorer:read', root, rel),
+    readBinary: (root: string, rel: string) => ipcRenderer.invoke('explorer:readBinary', root, rel),
+    write: (root: string, rel: string, content: string) =>
+      ipcRenderer.invoke('explorer:write', root, rel, content),
+    stat: (root: string, rel: string) => ipcRenderer.invoke('explorer:stat', root, rel),
+    mkdir: (root: string, rel: string) => ipcRenderer.invoke('explorer:mkdir', root, rel),
+    createFile: (root: string, rel: string) => ipcRenderer.invoke('explorer:createFile', root, rel),
+    rename: (root: string, rel: string, newName: string) =>
+      ipcRenderer.invoke('explorer:rename', root, rel, newName),
+    delete: (root: string, rel: string) => ipcRenderer.invoke('explorer:delete', root, rel),
+  },
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
