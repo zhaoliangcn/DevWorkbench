@@ -84,6 +84,15 @@ const api = {
     pick: () => ipcRenderer.invoke('envfile:pick'),
     read: (filePath: string) => ipcRenderer.invoke('envfile:read', filePath),
   },
+  smb: {
+    /** SMB 共享管理（smb:*，Windows net share / Linux smb.conf / macOS sharing） */
+    check: () => ipcRenderer.invoke('smb:check'),
+    list: () => ipcRenderer.invoke('smb:list'),
+    create: (args: { name: string; path: string; remark?: string; readonly?: boolean; users?: string }) =>
+      ipcRenderer.invoke('smb:create', args),
+    delete: (name: string) => ipcRenderer.invoke('smb:delete', name),
+    pickDir: () => ipcRenderer.invoke('smb:pickDir'),
+  },
   secvault: {
     /** 附录 B.7：凭据保险库（主进程级 AES-256-GCM 加密存储） */
     status: () => ipcRenderer.invoke('secvault:status'),

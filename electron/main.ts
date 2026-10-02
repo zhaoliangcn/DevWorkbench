@@ -15,6 +15,7 @@ import { registerRedisIpc, stopRedisAll } from './ipc/redis.js'
 import { registerSqliteIpc, stopSqlite } from './ipc/sqlite.js'
 import { registerAssistantIpc, stopAssistant } from './ipc/assistant.js'
 import { registerDockerIpc } from './ipc/docker.js'
+import { registerSmbIpc } from './ipc/smb.js'
 import { registerEnvfileIpc } from './ipc/envfile.js'
 import { registerSecvaultIpc } from './ipc/secvault.js'
 import { registerExplorerIpc } from './ipc/explorer.js'
@@ -84,6 +85,8 @@ app.whenReady().then(async () => {
   registerAssistantIpc()
   // 附录 B.6.1: Docker 管理面板（docker:* 命名空间）
   registerDockerIpc()
+  // SMB 共享管理（smb:* 命名空间）
+  registerSmbIpc()
   // 附录 B.6.3: .env 管理器（envfile:* 命名空间）
   registerEnvfileIpc()
   // 附录 B.7: 凭据保险库（secvault:* 命名空间）

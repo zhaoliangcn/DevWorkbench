@@ -2429,6 +2429,105 @@
   word-break: break-all;
 }
 
+/* ---------- SMB 共享管理 ---------- */
+
+.tb-root .smb-admin-warn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f0b429;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.tb-root .smb-create-panel {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.tb-root .smb-create-panel h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.tb-root .smb-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tb-root .smb-form-row > label:first-child {
+  flex: 0 0 56px;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.tb-root .smb-form-row input[type='text'],
+.tb-root .smb-form-row input:not([type]) {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.tb-root .smb-form-row button {
+  font-size: 11px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.tb-root .smb-form-row button.smb-primary {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.tb-root .smb-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.tb-root .smb-row {
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto;
+}
+
+.tb-root .smb-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted, var(--text-secondary));
+  vertical-align: middle;
+}
+
+.tb-root .smb-notice {
+  color: var(--success-color, #4ec9b0);
+}
+
+.tb-root .smb-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-secondary));
+}
+
 /* ---------- 附录 B.6.2：进程监视器 ---------- */
 
 .tb-root .procmon-toolbar {

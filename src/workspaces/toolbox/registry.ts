@@ -15,6 +15,7 @@ import { MockServerTool } from './tools/MockServerTool'
 import { HttpModule } from './tools/HttpModule'
 import { SSHModule } from './tools/SSHModule'
 import { WebhookTool } from './tools/WebhookTool'
+import { SmbShareTool } from './tools/SmbShareTool'
 import { IpTool } from './tools/IpTool'
 import { DatabaseTool } from './tools/DatabaseTool'
 import { TextProcessTool } from './tools/TextProcessTool'
@@ -63,6 +64,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('http', HttpModule),
   defineToolboxModule('ssh', SSHModule),
   defineToolboxModule('webhook', WebhookTool),
+  defineToolboxModule('smb', SmbShareTool),
   defineToolboxModule('ip', IpTool),
   defineToolboxModule('database', DatabaseTool),
   defineToolboxModule('textprocess', TextProcessTool),

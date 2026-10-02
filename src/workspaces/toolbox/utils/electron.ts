@@ -179,6 +179,14 @@ export interface ElectronAPIAdapter {
   }>
   envReadFile: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
 
+  /** SMB 共享管理（smb:* 命名空间） */
+  smbCheck: () => Promise<{ available: boolean; platform: string; isAdmin?: boolean; error?: string }>
+  smbList: () => Promise<{ success: boolean; raw: string; platform: string; error?: string }>
+  smbCreate: (args: { name: string; path: string; remark?: string; readonly?: boolean; users?: string }) =>
+    Promise<{ success: boolean; error?: string }>
+  smbDelete: (name: string) => Promise<{ success: boolean; error?: string }>
+  smbPickDir: () => Promise<{ success: boolean; canceled: boolean; path: string }>
+
   /** 附录 B.7：凭据保险库（主密码仅存渲染层内存，主进程不持久化） */
   vaultStatus: () => Promise<{ initialized: boolean; entryCount: number }>
   vaultInit: (password: string) => Promise<{ success: boolean; error?: string }>
@@ -308,6 +316,12 @@ const mockAPI: ElectronAPIAdapter = {
   envPickFiles: () => Promise.resolve({ success: false, canceled: true, files: [] }),
   envReadFile: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持文件读取' }),
 
+  smbCheck: () => Promise.resolve({ available: false, platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
+  smbList: () => Promise.resolve({ success: false, raw: '', platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
+  smbCreate: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SMB 管理' }),
+  smbDelete: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SMB 管理' }),
+  smbPickDir: () => Promise.resolve({ success: false, canceled: true, path: '' }),
+
   vaultStatus: () => Promise.resolve({ initialized: false, entryCount: 0 }),
   vaultInit: () => Promise.resolve({ success: false, error: 'Web 环境不支持保险库' }),
   vaultVerify: () => Promise.resolve({ success: false, verified: false, error: 'Web 环境不支持保险库' }),
@@ -379,6 +393,12 @@ function createElectronAPI(): ElectronAPIAdapter {
 
     envPickFiles: () => bridge.envfile.pick(),
     envReadFile: (filePath) => bridge.envfile.read(filePath),
+
+    smbCheck: () => bridge.smb.check(),
+    smbList: () => bridge.smb.list(),
+    smbCreate: (args) => bridge.smb.create(args),
+    smbDelete: (name) => bridge.smb.delete(name),
+    smbPickDir: () => bridge.smb.pickDir(),
 
     vaultStatus: () => bridge.secvault.status(),
     vaultInit: (password) => bridge.secvault.init(password),

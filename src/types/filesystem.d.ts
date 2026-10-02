@@ -128,6 +128,15 @@ interface ElectronAPI {
     }>
     read: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
   }
+  smb: {
+    /** SMB 共享管理（smb:* 命名空间） */
+    check: () => Promise<{ available: boolean; platform: string; isAdmin?: boolean; error?: string }>
+    list: () => Promise<{ success: boolean; raw: string; platform: string; error?: string }>
+    create: (args: { name: string; path: string; remark?: string; readonly?: boolean; users?: string }) =>
+      Promise<{ success: boolean; error?: string }>
+    delete: (name: string) => Promise<{ success: boolean; error?: string }>
+    pickDir: () => Promise<{ success: boolean; canceled: boolean; path: string }>
+  }
   secvault: {
     /** 附录 B.7：凭据保险库 */
     status: () => Promise<{ initialized: boolean; entryCount: number }>
