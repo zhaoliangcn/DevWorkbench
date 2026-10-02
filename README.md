@@ -5,7 +5,7 @@
 ## 功能
 
 - **知识库**：Markdown 笔记管理、搜索、AI 文本操作（续写/扩写/纠错/摘要/格式化）
-- **AI 助手**：嵌入 [dev-assistant-ts](https://github.com/zhaoliang/dev-assistant-ts) 的 Agent 能力——以知识库 Vault 为工作目录，支持文件读写、Glob/Grep、技能、定时任务；模型在设置页配置（Ollama / OpenAI / OpenAI 兼容）
+- **AI 助手**：嵌入 [dev-assistant-ts](https://github.com/zhaoliangcn/dev-assistant-ts) 的 Agent 能力——以知识库 Vault 为工作目录，支持文件读写、Glob/Grep、技能、定时任务；模型在设置页配置（Ollama / OpenAI / OpenAI 兼容）
 - **开发工具**：SSH 终端、进程/端口管理、环境检测、数据管理
 - **内置 API 服务**：Express 5，本地 127.0.0.1:3000
 
