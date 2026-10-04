@@ -10,6 +10,7 @@ import { SessionStore } from '../../node_modules/dev-assistant-ts/dist/persist/s
 import { getVaultPath } from './vault.js'
 import { registerToolboxTools, TOOLBOX_TOOL_NAMES } from './assistant-tools.js'
 import { registerKnowledgeTools } from './knowledge-tools.js'
+import { replaySessionContext } from './session-replay.js'
 
 /**
  * AI 助手 IPC（assistant:* 命名空间，对齐设计文档 Phase 6 + 附录 B/C）。
@@ -57,6 +58,8 @@ export interface AssistantStatus {
   port: number | null
   url: string | null
   sessionId: string | null
+  /** 当前会话文件绝对路径（会话管理：历史列表中标记/保护当前会话） */
+  sessionFile: string | null
   providerNames: string[]
   activeProvider: string | null
 }
@@ -86,6 +89,9 @@ let app: App | null = null
 
 /** Agent 运行互斥：assistant:run 与 cron runAgentTask 共用，防止并发交错两次会话 */
 let runBusy = false
+
+/** 最近一次成功启动的配置（会话管理：session:new / session:resume 以相同配置重建 App） */
+let lastStartOptions: AssistantStartInput | null = null
 
 // ---------- 审批桥（切片 D，设计 C.3） ----------
 
@@ -243,20 +249,71 @@ function currentStatus(): AssistantStatus {
     port: null,
     url: null,
     sessionId: app?.sessionId ?? null,
+    sessionFile: app ? app.sessionStore.getFilePath() : null,
     providerNames: app ? app.llm.providerNames() : [],
     activeProvider: app ? (app.llm.activeConfig()?.name ?? null) : null,
   }
+}
+
+/**
+ * 按配置组装并启动 App（会话管理：start / session:new / session:resume 共用）。
+ * resumeFile 传入时续写既有会话文件（SessionStore 复用原 sessionId）；
+ * 注意 resume 只续写轨迹文件、不回放模型上下文——调用方需自行回放（见 replaySessionContext）。
+ */
+async function launchApp(options: AssistantStartInput, resumeFile?: string): Promise<App> {
+  const working = await resolveWorkingDir(options.workingDir)
+  if (!working.dir) {
+    throw new Error(working.error ?? '工作目录不可用')
+  }
+  // 三段式清单：默认基线是下限而非默认值 —— 渲染端传 policy 只能在其上叠加收紧，
+  // 不能清空基线重新启用 exec_command / run_hook（防渲染端越权降级）
+  const disabledTools = [
+    ...new Set([
+      ...DEFAULT_DISABLED_TOOLS,
+      ...(Array.isArray(options.policy?.disabled) ? options.policy!.disabled! : []),
+      ...(Array.isArray(options.extraDisabledTools) ? options.extraDisabledTools : []),
+    ]),
+  ]
+  const next = await App.create({
+    workingDir: working.dir,
+    models: options.models,
+    approvalEnabled: options.approvalEnabled ?? false,
+    schedulerEnabled: options.schedulerEnabled ?? true,
+    disabledTools,
+    confirmApproval: confirmApprovalBridge,
+    resumeFile,
+  })
+  // 工具箱纯函数工具注入（缺省全部 toolbox_*）；先装技能过滤器再装审批包装
+  installToolFilter(next.tools)
+  registerToolboxTools(next.tools, options.extraToolNames ?? [...TOOLBOX_TOOL_NAMES])
+  // 知识库工具（C.5 进阶版）：Agent 可按路径读取钉选笔记全文
+  registerKnowledgeTools(next.tools)
+  // needs-approval 清单：执行前强制审批（审批总开关开启时）；基线同样只增不减
+  enforceNeedsApproval(
+    next.tools,
+    [
+      ...new Set([
+        ...DEFAULT_NEEDS_APPROVAL,
+        ...(Array.isArray(options.policy?.needsApproval) ? options.policy!.needsApproval! : []),
+      ]),
+    ],
+    () => !next.approval.isDisabled(),
+  )
+  next.setOnEvent(broadcast)
+  return next
 }
 
 function registerAssistantIpc() {
   ipcMain.handle(
     'assistant:start',
     async (_event, options: AssistantStartInput): Promise<{ success: boolean; error?: string; status: AssistantStatus | null }> => {
-      const working = await resolveWorkingDir(options.workingDir)
+      const opts = options ?? ({} as AssistantStartInput)
+      // 先校验配置再关旧实例：启动失败不影响运行中的助手
+      const working = await resolveWorkingDir(opts.workingDir)
       if (!working.dir) {
         return { success: false, error: working.error, status: null }
       }
-      if (!Array.isArray(options.models) || options.models.length === 0) {
+      if (!Array.isArray(opts.models) || opts.models.length === 0) {
         return { success: false, error: '未配置任何模型', status: null }
       }
       try {
@@ -265,42 +322,55 @@ function registerAssistantIpc() {
           app = null
         }
         rejectAllPendingApprovals()
-        // 三段式清单：默认基线是下限而非默认值 —— 渲染端传 policy 只能在其上叠加收紧，
-        // 不能清空基线重新启用 exec_command / run_hook（防渲染端越权降级）
-        const disabledTools = [
-          ...new Set([
-            ...DEFAULT_DISABLED_TOOLS,
-            ...(Array.isArray(options.policy?.disabled) ? options.policy!.disabled! : []),
-            ...(Array.isArray(options.extraDisabledTools) ? options.extraDisabledTools : []),
-          ]),
-        ]
-        const next = await App.create({
-          workingDir: working.dir,
-          models: options.models,
-          approvalEnabled: options.approvalEnabled ?? false,
-          schedulerEnabled: options.schedulerEnabled ?? true,
-          disabledTools,
-          confirmApproval: confirmApprovalBridge,
-        })
-        // 工具箱纯函数工具注入（缺省全部 toolbox_*）；先装技能过滤器再装审批包装
-        installToolFilter(next.tools)
-        registerToolboxTools(next.tools, options.extraToolNames ?? [...TOOLBOX_TOOL_NAMES])
-        // 知识库工具（C.5 进阶版）：Agent 可按路径读取钉选笔记全文
-        registerKnowledgeTools(next.tools)
-        // needs-approval 清单：执行前强制审批（审批总开关开启时）；基线同样只增不减
-        enforceNeedsApproval(
-          next.tools,
-          [
-            ...new Set([
-              ...DEFAULT_NEEDS_APPROVAL,
-              ...(Array.isArray(options.policy?.needsApproval) ? options.policy!.needsApproval! : []),
-            ]),
-          ],
-          () => !next.approval.isDisabled(),
-        )
-        next.setOnEvent(broadcast)
-        app = next
+        app = await launchApp(opts)
+        lastStartOptions = opts
         return { success: true, status: currentStatus() }
+      } catch (e) {
+        return { success: false, error: errMessage(e), status: null }
+      }
+    },
+  )
+
+  // ---------- 会话管理：新建 / 恢复（以最近一次启动配置重建 App） ----------
+
+  ipcMain.handle('assistant:session:new', async (): Promise<{ success: boolean; error?: string; status: AssistantStatus | null }> => {
+    if (runBusy) return { success: false, error: 'Agent 正在执行，无法切换会话', status: null }
+    if (!lastStartOptions) return { success: false, error: '助手尚未启动过，无可用启动配置', status: null }
+    try {
+      if (app) {
+        await app.close()
+        app = null
+      }
+      rejectAllPendingApprovals()
+      app = await launchApp(lastStartOptions)
+      return { success: true, status: currentStatus() }
+    } catch (e) {
+      return { success: false, error: errMessage(e), status: null }
+    }
+  })
+
+  ipcMain.handle(
+    'assistant:session:resume',
+    async (_event, file: string): Promise<{ success: boolean; error?: string; status: AssistantStatus | null; replayed?: number; truncated?: number }> => {
+      if (runBusy) return { success: false, error: 'Agent 正在执行，无法切换会话', status: null }
+      if (!lastStartOptions) return { success: false, error: '助手尚未启动过，无可用启动配置', status: null }
+      // 会话文件必须位于当前工作目录的 .dev-assistant-store 下（与 history:read 同一校验）
+      if (!(await isSafeSessionFile(file, lastStartOptions.workingDir))) {
+        return { success: false, error: '非法会话路径', status: null }
+      }
+      try {
+        if (app) {
+          await app.close()
+          app = null
+        }
+        rejectAllPendingApprovals()
+        const next = await launchApp(lastStartOptions, file)
+        // resumeFile 只续写轨迹文件、不回放内存上下文：这里把历史对话回放进 ContextManager，
+        // 使恢复后的会话对模型可见（否则"继续会话"是失忆的）
+        const events = (await SessionStore.readEvents(file)) as Array<Record<string, unknown>>
+        const r = replaySessionContext(next.agent.getContext(), events)
+        app = next
+        return { success: true, status: currentStatus(), replayed: r.replayed, truncated: r.truncated }
       } catch (e) {
         return { success: false, error: errMessage(e), status: null }
       }

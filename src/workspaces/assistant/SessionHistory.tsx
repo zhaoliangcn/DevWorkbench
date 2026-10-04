@@ -1,7 +1,8 @@
 // 会话历史浮层（切片 F，C.8 dsh 借鉴：Trajectory append-only 事件流查看）。
 // 数据来自主进程 assistant:history:*（dev-assistant-ts SessionStore 静态 API）。
+// 会话管理：列表项可「继续」（resumeFile 恢复 + 上下文回放），当前会话高亮且禁止删除。
 import { useState, useEffect, useCallback } from 'react'
-import { X, RefreshCw, Trash2, FileText, Search } from 'lucide-react'
+import { X, RefreshCw, Trash2, FileText, Search, RotateCcw } from 'lucide-react'
 import { assistantAPI } from './utils/electron'
 import { useAssistantStore } from '../../store/assistantStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
@@ -84,7 +85,7 @@ function EventRow({ event }: { event: AssistantHistoryEvent }) {
   }
 }
 
-export function SessionHistory({ onClose }: { onClose: () => void }) {
+export function SessionHistory({ onClose, onResume }: { onClose: () => void; onResume: (file: string) => void }) {
   const [sessions, setSessions] = useState<HistorySession[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [events, setEvents] = useState<AssistantHistoryEvent[]>([])
@@ -95,6 +96,8 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
     { sessionId: string; file: string; mtimeMs: number; hits: { timestamp: string; type: string; snippet: string }[] }[] | null
   >(null)
   const [branching, setBranching] = useState(false)
+  // 当前活跃会话文件（会话管理：高亮 + 禁止删除正在使用的会话）
+  const currentSessionFile = useAssistantStore((s) => s.status?.sessionFile ?? null)
 
   // 当前助手工作目录（'' = 跟随知识库 Vault）；历史会话按工作目录隔离
   const workingDir = () => useAssistantStore.getState().workingDir || undefined
@@ -235,28 +238,45 @@ export function SessionHistory({ onClose }: { onClose: () => void }) {
             ) : (
               <>
                 {sessions.length === 0 && <p className="sh-empty">暂无历史会话</p>}
-                {sessions.map((s) => (
-                  <div
-                    key={s.file}
-                    className={`sh-item ${activeFile === s.file ? 'active' : ''}`}
-                    onClick={() => void openSession(s.file)}
-                  >
-                    <span className="sh-item-label">{sessionLabel(s.sessionId)}</span>
-                    <span className="sh-item-meta">
-                      {formatSize(s.size)}
-                      <button
-                        className="sh-item-del"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void deleteSession(s.file)
-                        }}
-                        title="删除会话"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    </span>
-                  </div>
-                ))}
+                {sessions.map((s) => {
+                  const isCurrent = s.file === currentSessionFile
+                  return (
+                    <div
+                      key={s.file}
+                      className={`sh-item ${activeFile === s.file || isCurrent ? 'active' : ''}`}
+                      onClick={() => void openSession(s.file)}
+                    >
+                      <span className="sh-item-label">
+                        {sessionLabel(s.sessionId)}
+                        {isCurrent && <span className="sh-item-current">当前</span>}
+                      </span>
+                      <span className="sh-item-meta">
+                        {formatSize(s.size)}
+                        <button
+                          className="sh-item-del"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onResume(s.file)
+                          }}
+                          title="继续此会话：恢复历史对话上下文"
+                        >
+                          <RotateCcw size={11} />
+                        </button>
+                        <button
+                          className="sh-item-del"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void deleteSession(s.file)
+                          }}
+                          disabled={isCurrent}
+                          title={isCurrent ? '当前会话不可删除' : '删除会话'}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </span>
+                    </div>
+                  )
+                })}
               </>
             )}
           </div>

@@ -367,6 +367,18 @@ interface ElectronAPI {
       error?: string
       results: { sessionId: string; file: string; mtimeMs: number; hits: { timestamp: string; type: string; snippet: string }[] }[]
     }>
+    /** 会话管理：开启新会话（以最近一次启动配置重建助手） */
+    sessionNew: () => Promise<{ success: boolean; error?: string; status: AssistantStatus | null }>
+    /** 会话管理：恢复历史会话（续写原轨迹文件，并回放历史对话进上下文） */
+    sessionResume: (file: string) => Promise<{
+      success: boolean
+      error?: string
+      status: AssistantStatus | null
+      /** 回放进上下文的历史消息条数（0=空会话） */
+      replayed?: number
+      /** 因超上限截断的条数 */
+      truncated?: number
+    }>
     /** 技能预设进阶（切片 H.2）：工具清单与运行时工具子集 */
     toolsList: () => Promise<{ success: boolean; error?: string; names: string[] }>
     setToolFilter: (names: string[] | null) => Promise<{ success: boolean; error?: string }>
@@ -433,6 +445,8 @@ interface AssistantStatus {
   port: number | null
   url: string | null
   sessionId: string | null
+  /** 当前会话文件绝对路径（会话管理：历史列表标记/保护当前会话） */
+  sessionFile: string | null
   providerNames: string[]
   activeProvider: string | null
 }

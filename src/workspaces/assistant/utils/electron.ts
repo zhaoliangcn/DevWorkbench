@@ -42,6 +42,16 @@ export interface AssistantBridge {
     error?: string
     results: { sessionId: string; file: string; mtimeMs: number; hits: { timestamp: string; type: string; snippet: string }[] }[]
   }>
+  /** 会话管理：开启新会话（以最近一次启动配置重建助手） */
+  sessionNew: () => Promise<{ success: boolean; error?: string; status: AssistantStatus | null }>
+  /** 会话管理：恢复历史会话（续写原轨迹文件，并回放历史对话进上下文） */
+  sessionResume: (file: string) => Promise<{
+    success: boolean
+    error?: string
+    status: AssistantStatus | null
+    replayed?: number
+    truncated?: number
+  }>
   /** 技能预设进阶（切片 H.2）：工具清单与运行时工具子集 */
   toolsList: () => Promise<{ success: boolean; error?: string; names: string[] }>
   setToolFilter: (names: string[] | null) => Promise<{ success: boolean; error?: string }>
@@ -53,6 +63,7 @@ const mockStatus: AssistantStatus = {
   port: null,
   url: null,
   sessionId: null,
+  sessionFile: null,
   providerNames: [],
   activeProvider: null,
 }
@@ -72,6 +83,8 @@ const mockAssistant: AssistantBridge = {
   historyRead: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', events: [] }),
   historyDelete: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手' }),
   historySearch: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', results: [] }),
+  sessionNew: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', status: null }),
+  sessionResume: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', status: null }),
   toolsList: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手', names: [] }),
   setToolFilter: () => Promise.resolve({ success: false, error: 'Web 环境不支持 AI 助手' }),
   onEvent: () => () => {},

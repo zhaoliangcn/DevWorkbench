@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock, PanelLeft } from 'lucide-react'
+import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock, PanelLeft, MessageSquarePlus } from 'lucide-react'
 import { useAssistantStore } from '../../store/assistantStore'
 import { useCrossStore } from '../../store/crossStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
@@ -21,7 +21,14 @@ import './explorer/explorer.css'
  * - assistant:events 事件流式渲染（文本增量 / 工具调用 / 状态 / 错误）
  * - 消息发送 → assistant:run（主进程驱动完整 Agent 循环）
  * - 切片 D：知识库钉选笔记作为上下文；审批墙（高危工具调用需手动批准）
+ * - 会话管理：新会话 / 恢复历史会话（回放上下文），当前会话标识见头部徽标
  */
+
+/** sessionId 形如 2026-09-26T11-38-10-597-e3d5fa8d，取时间部分做短标签 */
+function sessionShortLabel(id: string): string {
+  const m = id.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})/)
+  return m ? `${m[1].slice(5)} ${m[2]}:${m[3]}:${m[4]}` : id
+}
 
 export function AssistantWorkspace() {
   const models = useAssistantStore((s) => s.models)
@@ -247,6 +254,41 @@ export function AssistantWorkspace() {
     })
   }
 
+  /** 会话管理：开启新会话（沿用当前启动配置，重置聊天视图） */
+  const handleNewSession = async () => {
+    if (running) return
+    const res = await assistantAPI.sessionNew()
+    if (!res.success || !res.status) {
+      setError(res.error ?? '开启新会话失败')
+      return
+    }
+    setStatus(res.status)
+    setError('')
+    clearMessages()
+    pushMessage({ role: 'status', content: '已开启新会话' })
+  }
+
+  /** 会话管理：恢复历史会话（主进程回放历史对话进上下文） */
+  const handleResumeSession = async (file: string) => {
+    if (running) return
+    const res = await assistantAPI.sessionResume(file)
+    if (!res.success || !res.status) {
+      setError(res.error ?? '恢复会话失败')
+      return
+    }
+    setStatus(res.status)
+    setError('')
+    setHistoryOpen(false)
+    clearMessages()
+    pushMessage({
+      role: 'status',
+      content:
+        res.replayed && res.replayed > 0
+          ? `已恢复会话（回放 ${res.replayed} 条历史消息${res.truncated ? `，较早 ${res.truncated} 条未回放` : ''}），可直接继续对话`
+          : '已恢复会话（该会话暂无对话记录）',
+    })
+  }
+
   const assistantRunning = status?.running ?? false
 
   return (
@@ -258,6 +300,11 @@ export function AssistantWorkspace() {
           <span className={`assistant-badge ${assistantRunning ? 'on' : ''}`}>
             {assistantRunning ? `运行中 · ${status?.activeProvider ?? '-'}` : '未启动'}
           </span>
+          {assistantRunning && status?.sessionId && (
+            <span className="assistant-badge session" title={`当前会话 ${status.sessionId}`}>
+              会话 {sessionShortLabel(status.sessionId)}
+            </span>
+          )}
         </div>
         <div className="assistant-header-right">
           <button
@@ -305,6 +352,15 @@ export function AssistantWorkspace() {
           >
             <Sparkles size={13} />
             技能
+          </button>
+          <button
+            className="assistant-btn"
+            onClick={() => void handleNewSession()}
+            disabled={running || !assistantRunning}
+            title="开启新会话：沿用当前配置，对话上下文从零开始"
+          >
+            <MessageSquarePlus size={13} />
+            新会话
           </button>
           <button className="assistant-btn" onClick={() => setHistoryOpen(true)} title="查看历史会话事件流">
             <History size={13} />
@@ -634,7 +690,9 @@ export function AssistantWorkspace() {
         </div>
       </div>
 
-      {historyOpen && <SessionHistory onClose={() => setHistoryOpen(false)} />}
+      {historyOpen && (
+        <SessionHistory onClose={() => setHistoryOpen(false)} onResume={(file) => void handleResumeSession(file)} />
+      )}
       {taskBoardOpen && <TaskBoard onClose={() => setTaskBoardOpen(false)} />}
     </div>
   )

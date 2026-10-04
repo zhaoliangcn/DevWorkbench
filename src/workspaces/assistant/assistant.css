@@ -701,6 +701,31 @@
   color: var(--color-danger);
 }
 
+/* 会话管理：恢复按钮 hover 用主色（区别于删除的危险色），当前会话禁删 */
+.sh-item-del:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.sh-item-del:disabled:hover {
+  color: var(--color-text-muted);
+}
+
+.sh-item-current {
+  margin-left: 6px;
+  font-size: 10px;
+  font-family: var(--font-sans, sans-serif);
+  color: var(--color-primary, #6366f1);
+  border: 1px solid var(--color-primary, #6366f1);
+  border-radius: 999px;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+.assistant-badge.session {
+  color: var(--color-text-muted);
+}
+
 .sh-detail {
   flex: 1;
   overflow-y: auto;

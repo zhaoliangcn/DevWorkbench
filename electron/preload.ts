@@ -211,6 +211,9 @@ const api = {
       ipcRenderer.invoke('assistant:history:delete', file, workingDir),
     historySearch: (query: string, workingDir?: string) =>
       ipcRenderer.invoke('assistant:history:search', query, workingDir),
+    // 会话管理：新建 / 恢复（以最近一次启动配置重建助手）
+    sessionNew: () => ipcRenderer.invoke('assistant:session:new'),
+    sessionResume: (file: string) => ipcRenderer.invoke('assistant:session:resume', file),
     // 技能预设进阶（切片 H.2）
     toolsList: () => ipcRenderer.invoke('assistant:tools:list'),
     setToolFilter: (names: string[] | null) => ipcRenderer.invoke('assistant:setToolFilter', names),
