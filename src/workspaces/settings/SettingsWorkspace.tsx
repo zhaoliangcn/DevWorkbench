@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useAssistantStore, DEFAULT_ASSISTANT_POLICY } from '../../store/assistantStore'
+import { useExplorerStore } from '../../store/explorerStore'
 import { electronAPI } from '../toolbox/utils/electron'
 import { assistantAPI } from '../assistant/utils/electron'
 import { Plus, Trash2, Power, PowerOff } from 'lucide-react'
@@ -105,10 +106,18 @@ export function SettingsWorkspace() {
     useAssistantStore.getState().setStatus(null)
   }
 
-  /** 选择助手工作目录（系统对话框）；改动经「保存并重启助手」生效 */
+  /** 选择助手工作目录（系统对话框）；改动经「保存并重启助手」生效；
+   *  反向同步助手页左侧文件面板根目录（setRoot 内 workingDir 已同值，幂等不重启） */
   const handlePickWorkingDir = async () => {
     const res = await assistantAPI.pickWorkingDir()
-    if (res.success && !res.canceled && res.path) setWorkingDir(res.path)
+    if (res.success && !res.canceled && res.path) {
+      setWorkingDir(res.path)
+      const ex = useExplorerStore.getState()
+      if (ex.root !== res.path) {
+        const name = res.path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || res.path
+        ex.setRoot(res.path, name)
+      }
+    }
   }
 
   const handleResetWorkingDir = () => setWorkingDir('')

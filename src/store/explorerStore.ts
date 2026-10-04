@@ -1,11 +1,47 @@
 import { create } from 'zustand'
 import { extOf, isImageExt, monacoLanguageOf } from '../workspaces/assistant/explorer/fileKind'
+import { useAssistantStore } from './assistantStore'
 
 // 开发助手：项目文件浏览与编辑状态（explorer 域）
 // 最近项目列表经 data:save/load 持久化（userData 下 JSON）；树/标签为会话态不持久化。
 
 const DATA_KEY = 'devworkbench-explorer'
 const MAX_RECENTS = 8
+
+/**
+ * 左侧选择项目根后联动 AI 助手工作目录：同步 assistantStore.workingDir，
+ * 助手运行中则按新目录幂等重启（assistant:start 停旧启新）；未运行时仅记录，
+ * 下次启动生效。设置页向左联动由 SettingsWorkspace 直接调 setRoot 完成。
+ */
+function syncAssistantWorkdir(path: string) {
+  const st = useAssistantStore.getState()
+  if (st.workingDir === path) return
+  st.setWorkingDir(path)
+  const api = window.electronAPI?.assistant
+  if (!api || !st.status?.running) return
+  const active = st.models.find((m) => m.name === st.activeModel) ?? st.models[0]
+  // 模型未就绪（无 key 且非 ollama）时不重启，避免无谓报错
+  if (!active || (active.apiKey.length === 0 && active.provider !== 'ollama')) return
+  void (async () => {
+    try {
+      const res = await api.start({
+        models: st.models,
+        schedulerEnabled: true,
+        approvalEnabled: st.approvalEnabled,
+        policy: st.policy,
+        workingDir: path || undefined,
+      })
+      const next = useAssistantStore.getState()
+      next.setStatus(res.status)
+      if (res.error) next.setError(res.error)
+      // 技能模式在助手重启后重放工具过滤器（H.2）
+      const act = next.activeSkill
+      if (!res.error && act?.tools) void api.setToolFilter(act.tools)
+    } catch (e) {
+      useAssistantStore.getState().setError(e instanceof Error ? e.message : String(e))
+    }
+  })()
+}
 
 export interface ExplorerTab {
   id: string
@@ -137,6 +173,8 @@ export const useExplorerStore = create<ExplorerStore>()((set, get) => ({
       recentRoots: recents,
     })
     void get().loadDir('')
+    // 联动 AI 助手工作目录（左侧 → 设置页同一 store，双向一致）
+    syncAssistantWorkdir(path)
   },
 
   togglePanel: () => set((s) => ({ panelVisible: !s.panelVisible })),
