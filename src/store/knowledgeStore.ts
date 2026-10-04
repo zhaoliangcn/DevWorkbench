@@ -282,12 +282,15 @@ function syncDeleteDir(path: string) {
   }
 }
 
+// 默认笔记只生成一次：两次独立调用会因随机 ID 不一致导致 activeNoteId 悬空
+const DEFAULT_NOTES = createDefaultNotes()
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      notes: createDefaultNotes(),
+      notes: DEFAULT_NOTES,
       folders: [],
-      activeNoteId: Object.keys(createDefaultNotes())[0],
+      activeNoteId: Object.keys(DEFAULT_NOTES)[0] ?? null,
       sidebarVisible: true,
       rightPanelVisible: true,
       rightPanelTab: 'backlinks',
@@ -398,13 +401,28 @@ export const useStore = create<AppState>()(
           const parts = note.path.split('/')
           const oldPath = note.path
           parts[parts.length - 1] = sanitized + '.md'
-          const newPath = parts.join('/')
+          let newPath = parts.join('/')
+
+          // 重名防护：目标路径已被其他笔记占用时自动加后缀，避免覆盖他人文件
+          if (Object.values(state.notes).some((n) => n.id !== id && n.path === newPath)) {
+            const dir = parts.slice(0, -1).join('/')
+            let counter = 1
+            do {
+              newPath = dir
+                ? `${dir}/${sanitized} (${counter}).md`
+                : `${sanitized} (${counter}).md`
+              counter++
+            } while (
+              Object.values(state.notes).some((n) => n.id !== id && n.path === newPath) &&
+              counter < 100
+            )
+          }
 
           if (isVaultOpen()) {
-            if (note.content) {
-              writeFile(newPath, note.content).catch(() => {})
-            }
-            deleteFile(oldPath).catch(() => {})
+            // 先写新文件成功后再删旧文件（原子顺序），失败不删——防数据丢失
+            writeFile(newPath, note.content ?? '')
+              .then(() => deleteFile(oldPath))
+              .catch(() => {})
           }
 
           return {
@@ -743,7 +761,7 @@ export const useStore = create<AppState>()(
             const id = generateNoteId()
             loadedNotes[id] = {
               id,
-              title: file.name,
+              title: file.name.replace(/\.md$/i, ''),
               content: file.content,
               path: file.path,
               createdAt: now,

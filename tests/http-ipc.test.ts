@@ -1,10 +1,10 @@
 // 附录 F F.2：http:request 主进程 handler 测试
 // 覆盖：文本响应、二进制 base64 回传、协议/URL 校验、失败路径、超时映射、isBinaryContent 边界
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import { describe, it, expect, afterAll, vi } from 'vitest'
 
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }))
 
-import { httpRequestHandler, isBinaryContent } from '../electron/ipc/http'
+import { httpRequestHandler, isBinaryContent, clampTimeoutMs, readBodyWithLimit } from '../electron/ipc/http'
 
 function mockFetchOnce(impl: (url: string, init?: RequestInit) => Promise<Response>) {
   const spy = vi.fn(impl)
@@ -13,7 +13,6 @@ function mockFetchOnce(impl: (url: string, init?: RequestInit) => Promise<Respon
 }
 
 describe('httpRequestHandler（附录 F F.2）', () => {
-  beforeAll(() => {})
   afterAll(() => {
     vi.unstubAllGlobals()
   })
@@ -108,11 +107,30 @@ describe('httpRequestHandler（附录 F F.2）', () => {
     expect(r.error).toContain('请求超时')
   })
 
-  it('timeoutMs 夹取 1s-60s', async () => {
-    const spy = mockFetchOnce(async () => new Response('ok'))
-    await httpRequestHandler({ url: 'https://api.example.com/x', timeoutMs: 5 })
-    const init = spy.mock.calls[0][1] as RequestInit
-    expect(init.signal).toBeInstanceOf(AbortSignal)
+  it('timeoutMs 夹取 1s-60s', () => {
+    expect(clampTimeoutMs(5)).toBe(1000)
+    expect(clampTimeoutMs(60001)).toBe(60000)
+    expect(clampTimeoutMs(30000)).toBe(30000)
+    expect(clampTimeoutMs(undefined)).toBe(30000)
+    expect(clampTimeoutMs(0)).toBe(30000)
+    expect(clampTimeoutMs(-5)).toBe(30000)
+    expect(clampTimeoutMs('2s')).toBe(30000)
+  })
+
+  it('readBodyWithLimit：限额内完整读取', async () => {
+    const bytes = Uint8Array.from([1, 2, 3, 4, 5])
+    const out = await readBodyWithLimit(new Response(bytes), 100)
+    expect(Buffer.from(out)).toEqual(Buffer.from(bytes))
+  })
+
+  it('readBodyWithLimit：超过上限抛错', async () => {
+    const bytes = Uint8Array.from([1, 2, 3, 4, 5])
+    await expect(readBodyWithLimit(new Response(bytes), 3)).rejects.toThrow('上限')
+  })
+
+  it('readBodyWithLimit：content-length 超限直接拒绝', async () => {
+    const res = new Response(new Uint8Array(3), { headers: { 'content-length': '999999' } })
+    await expect(readBodyWithLimit(res, 100)).rejects.toThrow('上限')
   })
 })
 

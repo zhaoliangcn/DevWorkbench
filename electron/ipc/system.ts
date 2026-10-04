@@ -8,6 +8,21 @@ import http from 'node:http'
 
 const execAsync = promisify(exec)
 
+/** IPC 边界的运行时校验（TS 类型对跨进程参数无效，拼接命令前必须把住） */
+export function assertPort(port: unknown): number {
+  if (!Number.isInteger(port) || (port as number) < 1 || (port as number) > 65535) {
+    throw new Error('非法端口（须为 1-65535 整数）')
+  }
+  return port as number
+}
+
+export function assertPid(pid: unknown): number {
+  if (!Number.isInteger(pid) || (pid as number) < 1) {
+    throw new Error('非法 PID')
+  }
+  return pid as number
+}
+
 function registerSystemIpc() {
   ipcMain.handle('app:getVersion', () => app.getVersion())
 
@@ -44,7 +59,13 @@ function registerSystemIpc() {
 
   // host 缺省时检测本地端口占用（lsof/netstat）；提供 host 时做远程端口连通性探测
   ipcMain.handle('system:checkPort', async (_event, port: number, host?: string) => {
+    try {
+      assertPort(port)
+    } catch {
+      return null
+    }
     if (host) {
+      if (typeof host !== 'string' || host.length === 0 || host.length > 253) return false
       return new Promise<boolean>((resolve) => {
         const socket = new net.Socket()
         const timer = setTimeout(() => {
@@ -129,6 +150,11 @@ function registerSystemIpc() {
   })
 
   ipcMain.handle('system:killProcess', async (_event, pid: number) => {
+    try {
+      assertPid(pid)
+    } catch {
+      return false
+    }
     try {
       if (process.platform === 'win32') {
         await execAsync(`taskkill /F /PID ${pid}`)

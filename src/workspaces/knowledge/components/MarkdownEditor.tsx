@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import DOMPurify from 'dompurify'
 import { useStore } from '../../../store/knowledgeStore'
 import { marked } from 'marked'
 import type { EditorMode } from '../../../types'
@@ -14,8 +15,18 @@ marked.setOptions({
   gfm: true,
 })
 
-/** 附件 dataURL 缓存：path → dataURL，跨笔记/跨渲染复用，避免重复读盘 */
+/** 附件 dataURL 缓存：path → dataURL，跨笔记/跨渲染复用，避免重复读盘（FIFO 上限防无界增长） */
+const IMAGE_CACHE_MAX = 100
 const imageDataCache = new Map<string, string>()
+
+function cacheImageData(path: string, dataUrl: string): void {
+  if (imageDataCache.has(path)) imageDataCache.delete(path)
+  imageDataCache.set(path, dataUrl)
+  if (imageDataCache.size > IMAGE_CACHE_MAX) {
+    const oldest = imageDataCache.keys().next().value
+    if (oldest !== undefined) imageDataCache.delete(oldest)
+  }
+}
 
 /** 大纲跳转事件（OutlinePanel → 预览区滚动） */
 const OUTLINE_JUMP_EVENT = 'knowledge:outline-jump'
@@ -41,7 +52,9 @@ function renderMarkdown(content: string): string {
   rawHtml = rawHtml.replace(/<h([1-6])((?:\s[^>]*)?>)/g, (_m, lvl: string, rest: string) => {
     return `<h${lvl} id="h-${headingIndex++}"${rest}`
   })
-  return rawHtml
+  // 消毒（P0 修复）：marked 透传原始 HTML，笔记内容（可能来自他人共享）未经
+  // 过滤不得进 DOM——过滤内联事件、script/iframe、javascript: 链接等向量
+  return DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['data-note-title'] })
 }
 
 /** wikilink 标题能否成为合法目标（含 [|] 的标题排除在补全候选之外） */
@@ -157,7 +170,7 @@ export default function MarkdownEditor() {
         .then((base64) => {
           if (!base64) return
           const dataUrl = `data:${mimeFromPath(relPath)};base64,${base64}`
-          imageDataCache.set(relPath, dataUrl)
+          cacheImageData(relPath, dataUrl)
           img.src = dataUrl
         })
         .catch(() => {

@@ -19,6 +19,9 @@ export function ProgrammerCalculatorTool() {
           .replace(/NOT/g, '~')
           .replace(/<< /g, '<<')
           .replace(/>> /g, '>>')
+          // 与 normal 模式同等的字符白名单（允许 0x 十六进制字面量），
+          // 防止 Function() 执行注入的表达式
+          .replace(/[^0-9a-fA-FxX&|^~()<>\s]/g, '')
         const r = Function(`"use strict"; return (${sanitized})`)()
         const num = Number(r)
         setResult(`十进制: ${num}\n二进制: ${num.toString(2)}\n八进制: ${num.toString(8)}\n十六进制: ${num.toString(16).toUpperCase()}`)

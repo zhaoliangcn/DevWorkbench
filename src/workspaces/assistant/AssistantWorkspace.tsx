@@ -91,7 +91,7 @@ export function AssistantWorkspace() {
         const st = await assistantAPI.status()
         setStatus(st)
         const active = models.find((m) => m.name === activeModel) ?? models[0]
-        if (!st.running && active && active.apiKey.length > 0 || active.provider === 'ollama') {
+        if (!st.running && active && (active.apiKey.length > 0 || active.provider === 'ollama')) {
           const res = await assistantAPI.start({
             models,
             schedulerEnabled: true,

@@ -126,11 +126,26 @@ async function ensureVault(): Promise<string> {
 }
 
 function resolveSafe(relativePath: string): string {
-  const resolved = path.resolve(vaultPath!, relativePath)
-  if (!resolved.startsWith(vaultPath!)) {
+  if (typeof relativePath !== 'string') throw new Error('路径越界')
+  const root = vaultPath!
+  const resolved = path.resolve(root, relativePath)
+  // 前缀校验必须含 path.sep，否则 '..\\sibling' 这类同层目录会通过 startsWith 越界；
+  // win32 路径大小写不敏感，比较前归一（对齐 explorer.ts resolveSafeEx）
+  const lc = (p: string) => (process.platform === 'win32' ? p.toLowerCase() : p)
+  const nRoot = lc(root).replace(/[\\/]+$/, '')
+  const nResolved = lc(resolved)
+  if (nResolved !== nRoot && !nResolved.startsWith(nRoot + path.sep)) {
     throw new Error('路径越界')
   }
   return resolved
+}
+
+/** resolveSafe 的纯函数核心（导出供测试）：resolved 是否落在 root 内 */
+export function isInsideRoot(root: string, resolved: string): boolean {
+  const lc = (p: string) => (process.platform === 'win32' ? p.toLowerCase() : p)
+  const nRoot = lc(path.resolve(root)).replace(/[\\/]+$/, '')
+  const nResolved = lc(path.resolve(resolved))
+  return nResolved === nRoot || nResolved.startsWith(nRoot + path.sep)
 }
 
 function getVaultPath(): string | null {

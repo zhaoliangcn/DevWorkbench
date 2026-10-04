@@ -2,8 +2,9 @@
 // 命中即触发 HTTP 请求（复用 http:request handler）或本地脚本（exec，30s 超时）。
 // 任务持久化 data 键 'cron-tasks'；触发日志写 'agent-task-log'（与 B.3 定时任务看板同源），
 // 并经 'cron:log' 实时推送 renderer。Agent 任务触发留待 F.4c。
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, dialog } from 'electron'
 import { exec } from 'node:child_process'
+import crypto from 'node:crypto'
 import { parseCron, ruleMatches, type CronRule } from './cron-core.js'
 import { loadDataFile, saveDataFile } from './data.js'
 import { ringPush } from './webhook.js'
@@ -71,6 +72,7 @@ export function validateTasks(tasks: CronTask[]): string | null {
       if (!/^https?:\/\//i.test(t.target.url)) return `任务「${t.name}」：HTTP 目标需以 http(s):// 开头`
     } else if (t.target.type === 'script') {
       if (!t.target.command?.trim()) return `任务「${t.name}」：脚本命令不能为空`
+      if (t.target.command.length > 2000) return `任务「${t.name}」：脚本命令过长（≤2000 字符）`
     } else if (!t.target.prompt?.trim()) {
       return `任务「${t.name}」：Agent 任务提示词不能为空`
     }
@@ -80,6 +82,52 @@ export function validateTasks(tasks: CronTask[]): string | null {
 
 function truncate(s: string, max = 400): string {
   return s.length > max ? `${s.slice(0, max)}…` : s
+}
+
+/* ---------- 脚本命令首次执行确认（哈希钉定） ----------
+ * 脚本目标是渲染端可控的 shell 执行原语：命令首次执行前弹系统级确认对话框，
+ * 批准按命令 sha256 记账（持久化），同一命令此后不再询问；命令内容变更即重新确认。 */
+
+const APPROVED_SCRIPTS_KEY = 'cron-approved-scripts'
+let approvedScriptHashes: Set<string> | null = null
+
+function loadApprovedScriptHashes(): Set<string> {
+  if (!approvedScriptHashes) {
+    try {
+      approvedScriptHashes = new Set(loadDataFile<string[]>(APPROVED_SCRIPTS_KEY) ?? [])
+    } catch {
+      // 存储读取失败按空集处理：退化为逐次确认，不影响调度器运行
+      approvedScriptHashes = new Set()
+    }
+  }
+  return approvedScriptHashes
+}
+
+function scriptCommandHash(command: string): string {
+  return crypto.createHash('sha256').update(command, 'utf8').digest('hex')
+}
+
+async function confirmScriptCommand(command: string): Promise<boolean> {
+  const approved = loadApprovedScriptHashes()
+  const hash = scriptCommandHash(command)
+  if (approved.has(hash)) return true
+  const win = BrowserWindow.getAllWindows()[0]
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning',
+    title: 'Cron 脚本首次执行确认',
+    message: '以下脚本命令尚未批准执行，是否允许？',
+    detail: `${command.slice(0, 1000)}${command.length > 1000 ? '\n…' : ''}\n\n「始终允许」后同一命令（内容一致）不再询问；修改命令会重新确认。`,
+    buttons: ['取消', '仅此一次允许', '始终允许此命令'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  })
+  if (response === 0) return false
+  if (response === 2) {
+    approved.add(hash)
+    saveDataFile(APPROVED_SCRIPTS_KEY, [...approved])
+  }
+  return true
 }
 
 /** 执行一次触发目标（http 走主进程 fetch；script 走 shell exec） */
@@ -99,6 +147,9 @@ export async function fireTarget(target: CronTarget): Promise<{ ok: boolean; det
   if (target.type === 'agent') {
     const r = await runAgentTask(target.prompt)
     return { ok: r.ok, detail: truncate(r.detail) }
+  }
+  if (typeof target.command !== 'string' || !(await confirmScriptCommand(target.command))) {
+    return { ok: false, detail: '脚本命令未获确认，已跳过执行' }
   }
   return new Promise((resolve) => {
     exec(

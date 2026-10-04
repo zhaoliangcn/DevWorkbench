@@ -72,31 +72,38 @@ async function readStream(
   const reader = body.getReader()
   const decoder = new TextDecoder()
   let fullContent = ''
+  let buffer = ''
+
+  const processLine = (line: string) => {
+    if (!line.startsWith('data: ')) return
+    const data = line.slice(6).trim()
+    if (data === '[DONE]') return
+    try {
+      const parsed = JSON.parse(data)
+      const content = parsed.choices?.[0]?.delta?.content || ''
+      if (content) {
+        fullContent += content
+        onChunk(content)
+      }
+    } catch {
+      // skip unparseable chunks
+    }
+  }
 
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
 
-    const text = decoder.decode(value, { stream: true })
-    const lines = text.split('\n')
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const data = line.slice(6).trim()
-      if (data === '[DONE]') continue
-
-      try {
-        const parsed = JSON.parse(data)
-        const content = parsed.choices?.[0]?.delta?.content || ''
-        if (content) {
-          fullContent += content
-          onChunk(content)
-        }
-      } catch {
-        // skip unparseable chunks
-      }
-    }
+    // 网络分片可能从任意字节处截断，跨 chunk 缓冲保证 data: 行完整后再解析
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) processLine(line)
   }
+
+  // flush：收尾未换行的最后一行
+  buffer += decoder.decode()
+  if (buffer) processLine(buffer)
 
   return fullContent
 }

@@ -150,9 +150,9 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
   next()
 }
 
-// Health check (no auth required)
+// Health check (no auth required)：仅探测服务可用性，不泄露 vault 路径等本地信息
 app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', vault: vaultDir })
+  res.json({ status: 'ok' })
 })
 
 // Apply auth to all other routes
@@ -613,25 +613,33 @@ app.delete('/api/folders/:path', (req: Request, res: Response) => {
 export function startApiServer(config: ApiConfig): Promise<number> {
   return new Promise((resolve, reject) => {
     storedApiKey = config.apiKey
-    
-    server = app.listen(config.port, config.host, () => {
-      console.log(`[API] Server running on http://${config.host}:${config.port}`)
-      console.log(`[API] API Key: ${config.apiKey}`)
-      resolve(config.port)
-    })
-    
-    server.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'EADDRINUSE') {
-        console.log(`[API] Port ${config.port} in use, trying ${config.port + 1}`)
-        server = app.listen(config.port + 1, config.host, () => {
-          console.log(`[API] Server running on http://${config.host}:${config.port + 1}`)
-          console.log(`[API] API Key: ${config.apiKey}`)
-          resolve(config.port + 1)
-        })
-      } else {
-        reject(err)
-      }
-    })
+    let settled = false
+
+    // 端口冲突自增重试（上限 10 次）；每个 listener 都挂 error 处理，
+    // 否则最终一次 EADDRINUSE 会以未捕获异常崩掉主进程
+    const tryListen = (port: number, attempt: number): void => {
+      const s = app.listen(port, config.host, () => {
+        console.log(`[API] Server running on http://${config.host}:${port}`)
+        if (!settled) {
+          settled = true
+          resolve(port)
+        }
+      })
+      server = s
+      s.on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE' && attempt < 10) {
+          console.log(`[API] Port ${port} in use, trying ${port + 1}`)
+          tryListen(port + 1, attempt + 1)
+          return
+        }
+        if (!settled) {
+          settled = true
+          reject(err)
+        }
+      })
+    }
+
+    tryListen(config.port, 0)
   })
 }
 

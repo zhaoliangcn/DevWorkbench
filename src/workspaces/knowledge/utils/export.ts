@@ -1,5 +1,7 @@
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import type { Tokens } from 'marked'
+import { escapeHtml } from './markdown'
 import {
   Document,
   Packer,
@@ -284,27 +286,28 @@ export async function exportToPdf(title: string, content: string): Promise<void>
         color: #0f0f23;
         border-bottom: 2px solid #6366f1;
         padding-bottom: 16px;
-      ">${title}</h1>
-      ${marked.parse(content)}
+      ">${escapeHtml(title)}</h1>
+      ${DOMPurify.sanitize(marked.parse(content) as string)}
     </div>
   `
 
+  // 样式加 .dw-pdf-export 作用域前缀：元素挂入 document.body 期间不污染应用全局样式
   const style = `
-    h1 { font-size: 24px; font-weight: 700; margin: 24px 0 16px; color: #0f0f23; }
-    h2 { font-size: 20px; font-weight: 600; margin: 20px 0 12px; color: #1a1a2e; }
-    h3 { font-size: 18px; font-weight: 600; margin: 16px 0 10px; }
-    h4 { font-size: 16px; font-weight: 600; margin: 14px 0 8px; }
-    h5 { font-size: 14px; font-weight: 600; margin: 12px 0 8px; }
-    h6 { font-size: 13px; font-weight: 600; margin: 10px 0 6px; }
-    p { margin: 12px 0; }
-    code {
+    .dw-pdf-export h1 { font-size: 24px; font-weight: 700; margin: 24px 0 16px; color: #0f0f23; }
+    .dw-pdf-export h2 { font-size: 20px; font-weight: 600; margin: 20px 0 12px; color: #1a1a2e; }
+    .dw-pdf-export h3 { font-size: 18px; font-weight: 600; margin: 16px 0 10px; }
+    .dw-pdf-export h4 { font-size: 16px; font-weight: 600; margin: 14px 0 8px; }
+    .dw-pdf-export h5 { font-size: 14px; font-weight: 600; margin: 12px 0 8px; }
+    .dw-pdf-export h6 { font-size: 13px; font-weight: 600; margin: 10px 0 6px; }
+    .dw-pdf-export p { margin: 12px 0; }
+    .dw-pdf-export code {
       background: #f5f5f5;
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'Consolas', 'Monaco', monospace;
       font-size: 0.9em;
     }
-    pre {
+    .dw-pdf-export pre {
       background: #f5f5f5;
       padding: 16px;
       border-radius: 8px;
@@ -313,53 +316,58 @@ export async function exportToPdf(title: string, content: string): Promise<void>
       font-size: 0.9em;
       line-height: 1.5;
     }
-    pre code {
+    .dw-pdf-export pre code {
       background: none;
       padding: 0;
     }
-    blockquote {
+    .dw-pdf-export blockquote {
       border-left: 4px solid #6366f1;
       padding-left: 16px;
       margin: 16px 0;
       color: #555;
     }
-    table {
+    .dw-pdf-export table {
       border-collapse: collapse;
       width: 100%;
       margin: 16px 0;
     }
-    th, td {
+    .dw-pdf-export th, .dw-pdf-export td {
       border: 1px solid #ddd;
       padding: 8px 12px;
       text-align: left;
     }
-    th {
+    .dw-pdf-export th {
       background: #f0f0f0;
       font-weight: 600;
     }
-    ul, ol {
+    .dw-pdf-export ul, .dw-pdf-export ol {
       padding-left: 24px;
       margin: 12px 0;
     }
-    li {
+    .dw-pdf-export li {
       margin: 4px 0;
     }
-    hr {
+    .dw-pdf-export hr {
       border: none;
       border-top: 1px solid #ddd;
       margin: 24px 0;
     }
-    a {
+    .dw-pdf-export a {
       color: #6366f1;
       text-decoration: none;
     }
-    img {
+    .dw-pdf-export img {
       max-width: 100%;
       height: auto;
     }
   `
 
   const element = document.createElement('div')
+  element.className = 'dw-pdf-export'
+  // 移出视口：导出期间不可见，但 html2canvas 仍可正常渲染
+  element.style.position = 'fixed'
+  element.style.left = '-9999px'
+  element.style.top = '0'
   element.innerHTML = `<style>${style}</style>${htmlContent}`
   document.body.appendChild(element)
 

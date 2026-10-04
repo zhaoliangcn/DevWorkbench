@@ -1,10 +1,17 @@
 // 附录 F F.4b：Cron 触发调度器测试（主进程侧纯逻辑：任务校验 + 目标执行）
 // 调度轮询/持久化/IPC 属模块内部副作用，由 ruleMatches（cron.test.ts）与人工验收覆盖
-import { describe, it, expect, afterAll, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'dw-cron-scheduler-'))
 
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
   BrowserWindow: { getAllWindows: vi.fn(() => []) },
+  dialog: { showMessageBox: vi.fn(async () => ({ response: 2 })) }, // 默认「始终允许」
+  app: { getPath: vi.fn(() => TMP_DIR) },
 }))
 
 // F.4c：隔离 Agent 执行（真实模块依赖 dev-assistant-ts 与 app 启动状态）
@@ -14,9 +21,10 @@ vi.mock('../electron/ipc/assistant', () => ({
 
 import { validateTasks, fireTarget, type CronTask } from '../electron/ipc/cron'
 import { runAgentTask } from '../electron/ipc/assistant'
+import { dialog } from 'electron'
 
-afterAll(() => {
-  vi.unstubAllGlobals()
+beforeEach(() => {
+  vi.mocked(dialog.showMessageBox).mockClear()
 })
 
 function makeTask(partial: Partial<CronTask>): CronTask {
@@ -81,10 +89,18 @@ describe('fireTarget（目标执行）', () => {
     expect(r.detail).toContain('ECONNREFUSED')
   })
 
-  it('脚本：echo 输出进入 detail', async () => {
+  it('脚本：echo 输出进入 detail（确认框返回「始终允许」）', async () => {
     const r = await fireTarget({ type: 'script', command: 'echo hello-cron' })
     expect(r.ok).toBe(true)
     expect(r.detail).toContain('hello-cron')
+  })
+
+  it('脚本：确认框取消则跳过执行', async () => {
+    vi.mocked(dialog.showMessageBox).mockResolvedValueOnce({ response: 0 } as never)
+    const r = await fireTarget({ type: 'script', command: 'echo cancelled-cron' })
+    expect(r.ok).toBe(false)
+    expect(r.detail).toContain('未获确认')
+    expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
   })
 
   it('脚本：非零退出码 ok=false，detail 含 exit', async () => {

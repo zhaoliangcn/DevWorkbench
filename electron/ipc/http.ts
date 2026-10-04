@@ -5,6 +5,9 @@ import { ipcMain } from 'electron'
 /** 默认超时 30s（接口调试场景） */
 const DEFAULT_TIMEOUT_MS = 30000
 
+/** 响应体硬上限：超大响应不再整体打进主进程内存 */
+const MAX_BODY_BYTES = 50 * 1024 * 1024
+
 /** base64 回传的响应类型前缀（其余按 utf8 文本处理） */
 const BINARY_TYPE_PREFIXES = [
   'image/',
@@ -44,6 +47,40 @@ export function isBinaryContent(contentType: string | null): boolean {
   return BINARY_TYPE_PREFIXES.some((p) => ct.startsWith(p))
 }
 
+/** 分块读取响应体并施加硬上限，超限抛错中止（导出供测试） */
+export async function readBodyWithLimit(res: Response, limit: number): Promise<Uint8Array> {
+  if (!res.body) return new Uint8Array(0)
+  const declared = Number(res.headers.get('content-length') ?? 0)
+  if (declared > limit) throw new Error(`响应体超过 ${limit / 1024 / 1024}MB 上限（content-length: ${declared}）`)
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    received += value.byteLength
+    if (received > limit) {
+      await reader.cancel()
+      throw new Error(`响应体超过 ${limit / 1024 / 1024}MB 上限`)
+    }
+    chunks.push(value)
+  }
+  const out = new Uint8Array(received)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
+}
+
+/** timeoutMs 夹取到 1s~60s（非法/缺省回退默认值） */
+export function clampTimeoutMs(value: unknown): number {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_TIMEOUT_MS
+  return Math.min(60000, Math.max(1000, n))
+}
+
 /** 纯 handler（不挂 ipcMain），便于 vitest 直接调用 */
 export async function httpRequestHandler(args: HttpRequestArgs): Promise<HttpResult> {
   const startTime = Date.now()
@@ -62,7 +99,7 @@ export async function httpRequestHandler(args: HttpRequestArgs): Promise<HttpRes
   }
 
   const method = String(args.method ?? 'GET').toUpperCase()
-  const timeoutMs = Math.min(60000, Math.max(1000, Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS))
+  const timeoutMs = clampTimeoutMs(args.timeoutMs)
 
   try {
     const res = await fetch(url, {
@@ -70,7 +107,8 @@ export async function httpRequestHandler(args: HttpRequestArgs): Promise<HttpRes
       headers: args.headers,
       body: ['POST', 'PUT', 'PATCH'].includes(method) ? args.body : undefined,
       signal: AbortSignal.timeout(timeoutMs),
-      // 不跟随跨协议重定向（防 https→http 降级静默）
+      // redirect:'follow' 会跟随包括 https→http 在内的所有重定向（undici 默认行为）。
+      // 本工具面向任意目标的接口调试，接受此行为；响应体经 readBodyWithLimit 施加硬上限。
       redirect: 'follow',
     })
 
@@ -81,7 +119,7 @@ export async function httpRequestHandler(args: HttpRequestArgs): Promise<HttpRes
 
     const contentType = res.headers.get('content-type')
     if (isBinaryContent(contentType)) {
-      const buf = Buffer.from(await res.arrayBuffer())
+      const buf = Buffer.from(await readBodyWithLimit(res, MAX_BODY_BYTES))
       return {
         success: true,
         status: res.status,
@@ -93,7 +131,7 @@ export async function httpRequestHandler(args: HttpRequestArgs): Promise<HttpRes
       }
     }
 
-    const text = await res.text()
+    const text = Buffer.from(await readBodyWithLimit(res, MAX_BODY_BYTES)).toString('utf8')
     return {
       success: true,
       status: res.status,

@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadApiConfig } from './api-config.js'
@@ -38,13 +38,28 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: 'DevWorkbench',
-    // 应用图标：macOS 用 icns，Windows 用 ico（打包时由 electron-builder 处理）
-    icon: path.resolve(__dirname, '..', 'icons', process.platform === 'darwin' ? 'devworkbench.icns' : 'devworkbench.ico'),
+    // 应用图标：Windows 用 ico，mac/Linux 用 png（icns 已随 74ecce4 移除，避免引用不存在文件）
+    icon: path.resolve(__dirname, '..', 'icons', process.platform === 'win32' ? 'devworkbench.ico' : 'devworkbench.png'),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
     },
+  })
+
+  // 导航/开窗/权限防护（P0 配套）：渲染层一旦被注入脚本，不得把带 preload 桥的
+  // 页面导航或弹窗到攻击者域名，否则 window.electronAPI 全量暴露给远程页面
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const devAllowed = isDev && url.startsWith('http://localhost:5173')
+    if (!devAllowed) event.preventDefault()
+  })
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // 应用内一律不开新窗口；外链交给系统浏览器
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  mainWindow.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
+    callback(false)
   })
 
   if (isDev) {

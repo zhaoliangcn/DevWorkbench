@@ -7,6 +7,9 @@ interface Message {
   timestamp: number
 }
 
+/** 消息环形上限：服务端高频推送时不至于内存无限增长 */
+const MAX_MESSAGES = 1000
+
 export function WebSocketTool() {
   const [url, setUrl] = useState('')
   const [connected, setConnected] = useState(false)
@@ -19,13 +22,24 @@ export function WebSocketTool() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // 组件卸载时关闭连接，防止已卸载组件继续收 onmessage 回调
+  useEffect(() => {
+    return () => {
+      wsRef.current?.close()
+      wsRef.current = null
+    }
+  }, [])
+
   const addMessage = (type: Message['type'], content: string) => {
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      type,
-      content,
-      timestamp: Date.now(),
-    }])
+    setMessages(prev => [
+      ...prev.slice(-(MAX_MESSAGES - 1)),
+      {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        type,
+        content,
+        timestamp: Date.now(),
+      },
+    ])
   }
 
   const connect = () => {

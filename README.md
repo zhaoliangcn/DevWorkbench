@@ -38,8 +38,15 @@ npm run electron:build
 | `npm run electron:start` | 开发模式（Vite + Electron） |
 | `npm run build` | tsc + vite build |
 | `npm run electron:build` | 构建并用 electron-builder 打包 |
+| `npm run electron:publish` | 构建并发布（发版入口，CI 由 v* tag 触发） |
 | `npm run lint` | eslint |
 | `npm run typecheck` | tsc -b --noEmit |
+| `npm test` / `npm run test:watch` | vitest 单测 |
+
+## 发布
+
+1. 更新 `package.json` 的 `version`
+2. 提交并推送 `v<版本>` tag（如 `v1.0.1`），CI 自动校验版本一致性并发布 GitHub Releases
 
 ## 依赖说明
 

@@ -70,6 +70,11 @@ export function MockServerTool() {
         </div>
       </div>
       <div className="tool-body">
+        <div className="tool-section" style={{ borderLeft: '3px solid #f59e0b', paddingLeft: '12px' }}>
+          <p style={{ margin: 0, color: '#b45309' }}>
+            ⚠️ Mock 服务尚未接入后端：当前仅支持规则编辑，「启动服务」不会真正监听端口。
+          </p>
+        </div>
         <div className="tool-section">
           <h4>服务状态</h4>
           <div className="server-status">

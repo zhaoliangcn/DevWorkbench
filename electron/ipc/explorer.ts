@@ -1,10 +1,13 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { loadDataFile, saveDataFile } from './data.js'
 
 // 开发助手：项目文件浏览与编辑（explorer:* 命名空间）
 // 路径模型：渲染层传 root（对话框所选项）+ rel（root 内相对路径，'/' 分隔），
 // 每次调用经 resolveSafeEx 校验防穿越（无状态，窗口刷新不失效）。
+// root 必须先经 explorer:pickRoot（系统对话框）登记才可使用——防被攻陷渲染进程
+// 直接指定任意 root（如 C:\）获得全盘读写删；登记表持久化，历史已选项目自动迁移。
 // handler 逻辑抽为独立导出函数（tests/explorer.test.ts 直测）。
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024 // 文本读取上限 2MB
@@ -50,6 +53,44 @@ type Err = { success: false; error: string }
 
 function err(e: unknown): Err {
   return { success: false, error: (e as Error).message }
+}
+
+/* ---------- root 登记表：仅系统对话框选过的目录可作为操作根 ---------- */
+
+const APPROVED_ROOTS_KEY = 'explorer-approved-roots'
+const LEGACY_EXPLORER_KEY = 'devworkbench-explorer'
+const approvedRoots = new Set<string>()
+
+function normalizeRoot(p: string): string {
+  const resolved = path.resolve(p)
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved
+}
+
+function persistApprovedRoots(): void {
+  try {
+    saveDataFile(APPROVED_ROOTS_KEY, [...approvedRoots])
+  } catch {
+    // 持久化失败仅影响重启后需重新登记，不阻断本次会话
+  }
+}
+
+export function approveRoot(root: string): void {
+  if (typeof root !== 'string' || !root) return
+  approvedRoots.add(normalizeRoot(root))
+  persistApprovedRoots()
+}
+
+export function isApprovedRoot(root: string): boolean {
+  if (typeof root !== 'string' || !root) return false
+  return approvedRoots.has(normalizeRoot(root))
+}
+
+/** 非 IPC handler 代码使用：未登记即拒绝 */
+export function requireApprovedRoot(root: string): string {
+  if (!isApprovedRoot(root)) {
+    throw new Error('项目根目录未登记，请先通过「选择项目根目录」打开')
+  }
+  return root
 }
 
 /** 路径校验：resolve 后必须等于 root 或位于 root + path.sep 之下（win32 大小写不敏感） */
@@ -244,7 +285,20 @@ export async function deleteEntry(root: string, rel: string) {
 }
 
 export function registerExplorerIpc() {
-  // 选择项目根目录
+  // 启动时恢复历史登记（含迁移：旧版本把已选根存于 devworkbench-explorer，均为用户曾对话框确认过的目录）
+  for (const p of loadDataFile<string[]>(APPROVED_ROOTS_KEY) ?? []) {
+    if (typeof p === 'string' && p) approvedRoots.add(normalizeRoot(p))
+  }
+  if (approvedRoots.size === 0) {
+    const legacy = loadDataFile<{ root?: string; recentRoots?: { path?: string }[] }>(LEGACY_EXPLORER_KEY)
+    const candidates = [legacy?.root, ...(legacy?.recentRoots ?? []).map((r) => r?.path ?? '')].filter(
+      (p): p is string => typeof p === 'string' && p.length > 0,
+    )
+    for (const p of candidates) approvedRoots.add(normalizeRoot(p))
+    if (approvedRoots.size > 0) persistApprovedRoots()
+  }
+
+  // 选择项目根目录（唯一登记入口）
   ipcMain.handle('explorer:pickRoot', async () => {
     const win = BrowserWindow.getAllWindows()[0]
     const result = await dialog.showOpenDialog(win, {
@@ -255,16 +309,21 @@ export function registerExplorerIpc() {
       return { success: true, canceled: true, root: null, name: null }
     }
     const root = result.filePaths[0]
+    approveRoot(root)
     return { success: true, canceled: false, root, name: path.basename(root) }
   })
 
-  ipcMain.handle('explorer:list', (_e, root: string, rel: string) => listEntries(root, rel))
-  ipcMain.handle('explorer:read', (_e, root: string, rel: string) => readEntry(root, rel))
-  ipcMain.handle('explorer:readBinary', (_e, root: string, rel: string) => readEntryBinary(root, rel))
-  ipcMain.handle('explorer:write', (_e, root: string, rel: string, content: string) => writeEntry(root, rel, content))
-  ipcMain.handle('explorer:stat', (_e, root: string, rel: string) => statEntry(root, rel))
-  ipcMain.handle('explorer:mkdir', (_e, root: string, rel: string) => makeDir(root, rel))
-  ipcMain.handle('explorer:createFile', (_e, root: string, rel: string) => createEntryFile(root, rel))
-  ipcMain.handle('explorer:rename', (_e, root: string, rel: string, newName: string) => renameEntry(root, rel, newName))
-  ipcMain.handle('explorer:delete', (_e, root: string, rel: string) => deleteEntry(root, rel))
+  ipcMain.handle('explorer:list', (_e, root: string, rel: string) => listEntries(requireApprovedRoot(root), rel))
+  ipcMain.handle('explorer:read', (_e, root: string, rel: string) => readEntry(requireApprovedRoot(root), rel))
+  ipcMain.handle('explorer:readBinary', (_e, root: string, rel: string) => readEntryBinary(requireApprovedRoot(root), rel))
+  ipcMain.handle('explorer:write', (_e, root: string, rel: string, content: string) =>
+    writeEntry(requireApprovedRoot(root), rel, content),
+  )
+  ipcMain.handle('explorer:stat', (_e, root: string, rel: string) => statEntry(requireApprovedRoot(root), rel))
+  ipcMain.handle('explorer:mkdir', (_e, root: string, rel: string) => makeDir(requireApprovedRoot(root), rel))
+  ipcMain.handle('explorer:createFile', (_e, root: string, rel: string) => createEntryFile(requireApprovedRoot(root), rel))
+  ipcMain.handle('explorer:rename', (_e, root: string, rel: string, newName: string) =>
+    renameEntry(requireApprovedRoot(root), rel, newName),
+  )
+  ipcMain.handle('explorer:delete', (_e, root: string, rel: string) => deleteEntry(requireApprovedRoot(root), rel))
 }

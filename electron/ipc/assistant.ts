@@ -84,6 +84,9 @@ const DEFAULT_NEEDS_APPROVAL = ['write_file', 'edit_file']
 
 let app: App | null = null
 
+/** Agent 运行互斥：assistant:run 与 cron runAgentTask 共用，防止并发交错两次会话 */
+let runBusy = false
+
 // ---------- 审批桥（切片 D，设计 C.3） ----------
 
 type ConfirmHandler = NonNullable<AppOptions['confirmApproval']>
@@ -262,10 +265,14 @@ function registerAssistantIpc() {
           app = null
         }
         rejectAllPendingApprovals()
-        // 三段式清单：disabled 决定注册裁剪面（渲染端未传则用主进程默认）
+        // 三段式清单：默认基线是下限而非默认值 —— 渲染端传 policy 只能在其上叠加收紧，
+        // 不能清空基线重新启用 exec_command / run_hook（防渲染端越权降级）
         const disabledTools = [
-          ...(options.policy?.disabled ?? DEFAULT_DISABLED_TOOLS),
-          ...(options.extraDisabledTools ?? []),
+          ...new Set([
+            ...DEFAULT_DISABLED_TOOLS,
+            ...(Array.isArray(options.policy?.disabled) ? options.policy!.disabled! : []),
+            ...(Array.isArray(options.extraDisabledTools) ? options.extraDisabledTools : []),
+          ]),
         ]
         const next = await App.create({
           workingDir: working.dir,
@@ -280,10 +287,15 @@ function registerAssistantIpc() {
         registerToolboxTools(next.tools, options.extraToolNames ?? [...TOOLBOX_TOOL_NAMES])
         // 知识库工具（C.5 进阶版）：Agent 可按路径读取钉选笔记全文
         registerKnowledgeTools(next.tools)
-        // needs-approval 清单：执行前强制审批（审批总开关开启时）
+        // needs-approval 清单：执行前强制审批（审批总开关开启时）；基线同样只增不减
         enforceNeedsApproval(
           next.tools,
-          options.policy?.needsApproval ?? DEFAULT_NEEDS_APPROVAL,
+          [
+            ...new Set([
+              ...DEFAULT_NEEDS_APPROVAL,
+              ...(Array.isArray(options.policy?.needsApproval) ? options.policy!.needsApproval! : []),
+            ]),
+          ],
           () => !next.approval.isDisabled(),
         )
         next.setOnEvent(broadcast)
@@ -311,11 +323,15 @@ function registerAssistantIpc() {
 
   ipcMain.handle('assistant:run', async (_event, message: string): Promise<AssistantRunResult> => {
     if (!app) return { success: false, message: '', error: '助手未启动' }
+    if (runBusy) return { success: false, message: '', error: '已有 Agent 任务在执行，请等待完成' }
+    runBusy = true
     try {
       const r = await app.run(message)
       return { success: r.success, message: r.message }
     } catch (e) {
       return { success: false, message: '', error: errMessage(e) }
+    } finally {
+      runBusy = false
     }
   })
 
@@ -472,11 +488,15 @@ async function stopAssistant() {
 /** 附录 F F.4c：Cron 调度器直触 Agent 任务（绕过 IPC，复用 app.run 上下文与工具授权） */
 export async function runAgentTask(prompt: string): Promise<{ ok: boolean; detail: string }> {
   if (!app) return { ok: false, detail: '助手未启动（需在 AI 助手页启动并配置模型）' }
+  if (runBusy) return { ok: false, detail: '已有 Agent 任务在执行，本次触发跳过' }
+  runBusy = true
   try {
     const r = await app.run(prompt)
     return r.success ? { ok: true, detail: r.message } : { ok: false, detail: r.message || 'Agent 任务执行失败' }
   } catch (e) {
     return { ok: false, detail: errMessage(e) }
+  } finally {
+    runBusy = false
   }
 }
 

@@ -30,6 +30,12 @@ interface GenerateItem {
 }
 
 const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
+const MAX_EXPORT_PX = 1024 // 导出尺寸上限：防 {sizes:[50000]} → Buffer.alloc 巨量内存
+const MAX_SOURCE_BYTES = 64 * 1024 * 1024 // 源文件读取上限
+const SAVE_EXTENSIONS = new Set(['.png', '.ico', '.icns'])
+
+/** generate 只接受 iconconvert:open 最近返回的路径（会话绑定，防任意路径读取） */
+let lastOpenedSource: string | null = null
 const ICNS_TYPE_BY_SIZE: Record<number, string> = {
   16: 'icp4',
   32: 'icp5',
@@ -285,9 +291,10 @@ export function registerIconConvertIpc() {
     const buf = fs.readFileSync(filePath)
     const format = detectFormat(buf)
     if (!format) throw new Error('无法识别的文件格式')
-    let width = 0
-    let height = 0
-    let previewDataUrl = ''
+    lastOpenedSource = path.resolve(filePath)
+    let width: number
+    let height: number
+    let previewDataUrl: string
     if (format === 'ico') {
       const entries = parseIcoEntries(buf)
       width = Math.max(...entries.map((e) => e.width))
@@ -325,6 +332,11 @@ export function registerIconConvertIpc() {
 
   ipcMain.handle('iconconvert:generate', async (_event, args: { path: string; target: 'ico' | 'icns' | 'png'; sizes?: number[] }) => {
     const { path: filePath, target } = args
+    if (typeof filePath !== 'string' || path.resolve(filePath) !== lastOpenedSource) {
+      throw new Error('请先打开一个图标/图片文件')
+    }
+    const stat = fs.statSync(filePath)
+    if (!stat.isFile() || stat.size > MAX_SOURCE_BYTES) throw new Error('源文件不可用或超过 64MB 上限')
     const buf = fs.readFileSync(filePath)
     const format = detectFormat(buf)
     if (!format) throw new Error('无法识别的文件格式')
@@ -361,7 +373,7 @@ export function registerIconConvertIpc() {
     }
 
     // PNG 导出（ICO/ICNS 拆帧 或 栅格图缩放导出）
-    const sizes = (args.sizes ?? [256]).filter((s) => s > 0)
+    const sizes = (args.sizes ?? [256]).filter((s) => s > 0 && s <= MAX_EXPORT_PX)
     if (format === 'ico') {
       for (const e of parseIcoEntries(buf)) {
         items.push({
@@ -409,16 +421,24 @@ export function registerIconConvertIpc() {
         fs.writeFileSync(result.filePath, Buffer.from(it.base64, 'base64'))
         return { canceled: false, saved: [result.filePath] }
       }
-      // 多文件（PNG 拆帧）：选择目录后按名称写入
+      // 多文件（PNG 拆帧）：选择目录后按名称写入；文件名来自渲染端，必须归一+白名单防穿越
       const result = await dialog.showOpenDialog(win, {
         properties: ['openDirectory', 'createDirectory'],
       })
       if (result.canceled || !result.filePaths[0]) return { canceled: true, saved: [] }
-      const dir = result.filePaths[0]
+      const dir = path.resolve(result.filePaths[0])
+      const lc = (p: string) => (process.platform === 'win32' ? p.toLowerCase() : p)
       const saved: string[] = []
       for (const it of args.items) {
-        const target = path.join(dir, it.name)
-        fs.writeFileSync(target, Buffer.from(it.base64, 'base64'))
+        const name = path.basename(String(it?.name ?? ''))
+        if (!name || name.startsWith('.') || !SAVE_EXTENSIONS.has(path.extname(name).toLowerCase())) {
+          throw new Error('非法导出文件名')
+        }
+        const target = path.resolve(dir, name)
+        if (lc(target) !== lc(dir) && !lc(target).startsWith(lc(dir) + path.sep)) {
+          throw new Error('导出路径越界')
+        }
+        fs.writeFileSync(target, Buffer.from(String(it?.base64 ?? ''), 'base64'))
         saved.push(target)
       }
       return { canceled: false, saved }
