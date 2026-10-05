@@ -29,7 +29,7 @@
     "chokidar": "^5.0.0",
     "cors": "^2.8.6",
     "crypto-js": "^4.2.0",
-    "dev-assistant-ts": "git+https://github.com/zhaoliangcn/dev-assistant-ts.git#ba463c37e993f8efb0ac67b5a577096e8a39a76b",
+    "dev-assistant-ts": "git+https://github.com/zhaoliangcn/dev-assistant-ts.git#0050570fd4d3c9185fe73c3b146d3a4f11e1f7be",
     "dompurify": "^3.4.16",
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
