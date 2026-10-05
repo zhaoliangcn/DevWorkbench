@@ -976,6 +976,80 @@
   color: #cccccc;
 }
 
+/* ---------- SSH 多标签页 ---------- */
+
+.tb-root .ssh-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .ssh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 10px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  max-width: 200px;
+}
+
+.tb-root .ssh-tab:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .ssh-tab.active {
+  border-color: var(--accent-color);
+  background-color: var(--bg-primary);
+  font-weight: 600;
+}
+
+.tb-root .ssh-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tb-root .ssh-tab-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--text-secondary);
+}
+
+.tb-root .ssh-tab-status-dot[data-status='connected'] {
+  background-color: var(--success-color);
+}
+
+.tb-root .ssh-tab-status-dot[data-status='connecting'] {
+  background-color: var(--warning-color);
+}
+
+.tb-root .ssh-tab-status-dot[data-status='error'] {
+  background-color: var(--error-color);
+}
+
+.tb-root .ssh-tab-close {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tb-root .ssh-tab-close:hover {
+  color: var(--error-color);
+}
+
 /* ---------- Phase 4 待迁移占位 ---------- */
 .tb-root .module-pending {
   height: 100%;
