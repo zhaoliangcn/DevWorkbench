@@ -62,6 +62,17 @@ interface ElectronAPI {
     delete: (relativePath: string) => Promise<void>
     list: () => Promise<{ path: string; name: string; content: string }[]>
     export: (relativePath: string, content: string) => Promise<void>
+    /** 随手记导入/导出：系统对话框存取文本文件，路径不由渲染层指定 */
+    saveTextAs: (
+      fileName: string,
+      content: string,
+      filterName?: string,
+      extension?: string,
+    ) => Promise<{ success: boolean; canceled: boolean; path?: string; error?: string }>
+    openTextFile: (
+      filterName?: string,
+      extensions?: string[],
+    ) => Promise<{ success: boolean; canceled: boolean; content: string; path?: string; error?: string }>
   }
   dir: {
     list: () => Promise<string[]>

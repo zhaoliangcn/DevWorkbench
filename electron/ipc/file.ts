@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { resolveSafe, markWrite } from './vault.js'
 
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024
+
 export function registerFileIpc() {
   ipcMain.handle('file:read', (_event, relativePath: string) => {
     const fullPath = resolveSafe(relativePath)
@@ -147,6 +149,52 @@ export function registerFileIpc() {
     })
     if (!result.canceled && result.filePath) {
       fs.writeFileSync(result.filePath, content, 'utf-8')
+    }
+  })
+
+  // 另存为：渲染进程只给默认文件名与过滤器，路径由系统对话框决定
+  ipcMain.handle(
+    'file:saveTextAs',
+    async (_event, fileName: string, content: string, filterName?: string, extension?: string) => {
+      if (typeof content !== 'string') return { success: false, canceled: true }
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      const result = await dialog.showSaveDialog(mainWindow, {
+        defaultPath: typeof fileName === 'string' && fileName ? fileName : 'export.txt',
+        filters: [{ name: filterName || '文本文件', extensions: [extension || 'txt'] }],
+      })
+      if (result.canceled || !result.filePath) return { success: false, canceled: true }
+      try {
+        fs.writeFileSync(result.filePath, content, 'utf-8')
+        return { success: true, canceled: false, path: result.filePath }
+      } catch (e) {
+        return { success: false, canceled: false, error: (e as Error).message }
+      }
+    },
+  )
+
+  // 打开并读取：单次 IPC 完成对话框选择+读取，渲染进程无法指定任意路径
+  ipcMain.handle('file:openTextFile', async (_event, filterName?: string, extensions?: string[]) => {
+    const exts =
+      Array.isArray(extensions) && extensions.length
+        ? extensions.slice(0, 8).map(String).filter((e) => /^[A-Za-z0-9]{1,8}$/.test(e))
+        : ['txt']
+    const result = await dialog.showOpenDialog({
+      title: '打开文件',
+      properties: ['openFile'],
+      filters: [{ name: filterName || '文本文件', extensions: exts.length ? exts : ['txt'] }],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true, content: '' }
+    }
+    const filePath = result.filePaths[0]
+    try {
+      const stat = fs.statSync(filePath)
+      if (stat.size > MAX_IMPORT_BYTES) {
+        return { success: false, canceled: false, content: '', error: '文件超过 5MB 上限' }
+      }
+      return { success: true, canceled: false, content: fs.readFileSync(filePath, 'utf-8'), path: filePath }
+    } catch (e) {
+      return { success: false, canceled: false, content: '', error: (e as Error).message }
     }
   })
 }

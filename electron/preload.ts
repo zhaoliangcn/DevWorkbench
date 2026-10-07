@@ -34,6 +34,10 @@ const api = {
     delete: (relativePath: string) => ipcRenderer.invoke('file:delete', relativePath),
     list: () => ipcRenderer.invoke('file:list'),
     export: (relativePath: string, content: string) => ipcRenderer.invoke('file:export', relativePath, content),
+    saveTextAs: (fileName: string, content: string, filterName?: string, extension?: string) =>
+      ipcRenderer.invoke('file:saveTextAs', fileName, content, filterName, extension),
+    openTextFile: (filterName?: string, extensions?: string[]) =>
+      ipcRenderer.invoke('file:openTextFile', filterName, extensions),
   },
   dir: {
     list: () => ipcRenderer.invoke('dir:list'),

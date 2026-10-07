@@ -179,6 +179,18 @@ export interface ElectronAPIAdapter {
   }>
   envReadFile: (filePath: string) => Promise<{ success: boolean; raw: string; error?: string }>
 
+  /** 随手记导入/导出：系统对话框存取文本文件 */
+  saveTextAs: (
+    fileName: string,
+    content: string,
+    filterName?: string,
+    extension?: string,
+  ) => Promise<{ success: boolean; canceled: boolean; path?: string; error?: string }>
+  openTextFile: (
+    filterName?: string,
+    extensions?: string[],
+  ) => Promise<{ success: boolean; canceled: boolean; content: string; path?: string; error?: string }>
+
   /** SMB 共享管理（smb:* 命名空间） */
   smbCheck: () => Promise<{ available: boolean; platform: string; isAdmin?: boolean; error?: string }>
   smbList: () => Promise<{ success: boolean; raw: string; platform: string; error?: string }>
@@ -316,6 +328,11 @@ const mockAPI: ElectronAPIAdapter = {
   envPickFiles: () => Promise.resolve({ success: false, canceled: true, files: [] }),
   envReadFile: () => Promise.resolve({ success: false, raw: '', error: 'Web 环境不支持文件读取' }),
 
+  saveTextAs: () =>
+    Promise.resolve({ success: false, canceled: false, error: 'Web 环境不支持文件导出' }),
+  openTextFile: () =>
+    Promise.resolve({ success: false, canceled: false, content: '', error: 'Web 环境不支持文件导入' }),
+
   smbCheck: () => Promise.resolve({ available: false, platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbList: () => Promise.resolve({ success: false, raw: '', platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbCreate: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SMB 管理' }),
@@ -393,6 +410,10 @@ function createElectronAPI(): ElectronAPIAdapter {
 
     envPickFiles: () => bridge.envfile.pick(),
     envReadFile: (filePath) => bridge.envfile.read(filePath),
+
+    saveTextAs: (fileName, content, filterName, extension) =>
+      bridge.file.saveTextAs(fileName, content, filterName, extension),
+    openTextFile: (filterName, extensions) => bridge.file.openTextFile(filterName, extensions),
 
     smbCheck: () => bridge.smb.check(),
     smbList: () => bridge.smb.list(),

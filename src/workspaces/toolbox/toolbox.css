@@ -1677,8 +1677,81 @@
 }
 
 .tb-root .note-time {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
+}
+
+/* ---------- 随手记：加密 / 导入导出 ---------- */
+.tb-root .note-locked-content {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 10px;
+  background-color: var(--bg-primary);
+  border: 1px dashed var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tb-root .note-unlock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tb-root .notes-import-panel {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .notes-import-panel .tool-hint {
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tb-root .import-strategies {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tb-root .import-strategy {
+  flex: 1;
+  padding: 8px 12px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.tb-root .import-strategy:hover {
+  border-color: var(--accent-color);
+}
+
+.tb-root .import-strategy.active {
+  border-color: var(--accent-color);
+  background-color: var(--accent-color);
+  color: #fff;
+}
+
+.tb-root .import-result {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.tb-root .import-result.error {
+  color: var(--error-color);
 }
 
 .tb-root .color-picker {
