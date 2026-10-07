@@ -11,6 +11,7 @@ import { getVaultPath } from './vault.js'
 import { registerToolboxTools, TOOLBOX_TOOL_NAMES } from './assistant-tools.js'
 import { registerKnowledgeTools } from './knowledge-tools.js'
 import { replaySessionContext } from './session-replay.js'
+import { findOutsidePath } from './assistant-path-guard.js'
 
 /**
  * AI 助手 IPC（assistant:* 命名空间，对齐设计文档 Phase 6 + 附录 B/C）。
@@ -127,6 +128,35 @@ const confirmApprovalBridge: ConfirmHandler = (requirement, scope) => {
 
 /** 技能工具过滤器 setter（随 app 实例重建而更新；app 停止时置 null） */
 let setToolFilterImpl: ((names: string[] | null) => void) | null = null
+
+/**
+ * 文件工具路径守卫（宿主侧对冲上游围栏缺口）：包装 execute 最内层，
+ * 按参数拦截越出 workingDir 的文件路径。模型输出不可信（提示词注入可来自
+ * 被读取的文件），上游修复发布前此守卫独立生效；上游修复后仍保留双保险。
+ */
+function installPathGuard(tools: App['tools'], workingDir: string) {
+  const original = tools.execute.bind(tools)
+  type ExecParams = Parameters<App['tools']['execute']>
+  type ExecReturn = Awaited<ReturnType<App['tools']['execute']>>
+  const patched = async (name: string, argsJson: string, context: ExecParams[2], approval?: ExecParams[3]): Promise<ExecReturn> => {
+    try {
+      const parsed = JSON.parse(argsJson) as Record<string, unknown>
+      const outside = findOutsidePath(name, parsed, workingDir)
+      if (outside) {
+        return {
+          success: false,
+          content: `路径越界: ${outside} 不在助手工作目录内（宿主已拦截；文件工具仅允许访问工作目录之内）`,
+          restartRequested: false,
+          errorCategory: 'permanent',
+        }
+      }
+    } catch {
+      // 参数 JSON 解析失败交给工具自身按缺参报错
+    }
+    return original(name, argsJson, context, approval)
+  }
+  ;(tools as { execute: typeof patched }).execute = patched
+}
 
 /**
  * 技能预设进阶（切片 H.2）：运行时工具子集过滤。
@@ -282,7 +312,12 @@ async function launchApp(options: AssistantStartInput, resumeFile?: string): Pro
     disabledTools,
     confirmApproval: confirmApprovalBridge,
     resumeFile,
+    // hooks 定义来自 workingDir 内模型可写的 .dev-assistant-hooks.toml，自动执行
+    // 不经审批管线（上游 P0）：嵌入场景一律关闭，技能/定时任务走宿主自有机制
+    hooksEnabled: false,
   })
+  // 包装顺序：路径守卫最内层（先包原实现），其后技能过滤器、审批包装依次叠加
+  installPathGuard(next.tools, working.dir)
   // 工具箱纯函数工具注入（缺省全部 toolbox_*）；先装技能过滤器再装审批包装
   installToolFilter(next.tools)
   registerToolboxTools(next.tools, options.extraToolNames ?? [...TOOLBOX_TOOL_NAMES])
