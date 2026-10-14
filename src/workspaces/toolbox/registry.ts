@@ -27,6 +27,7 @@ import { MirrorTool } from './tools/MirrorTool'
 import { CronTool } from './tools/CronTool'
 import { ImageTool } from './tools/ImageTool'
 import { IconConvertTool } from './tools/IconConvertTool'
+import { PdfTool } from './tools/PdfTool'
 import { BackupTool } from './tools/BackupTool'
 import { SnippetsModule } from './tools/SnippetsModule'
 import { NotesModule } from './tools/NotesModule'
@@ -77,6 +78,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('cron', CronTool),
   defineToolboxModule('imagetool', ImageTool),
   defineToolboxModule('iconconvert', IconConvertTool),
+  defineToolboxModule('pdf', PdfTool),
   defineToolboxModule('backup', BackupTool),
   defineToolboxModule('snippets', SnippetsModule),
   defineToolboxModule('notes', NotesModule),

@@ -332,6 +332,35 @@ interface ElectronAPI {
       saved: string[]
     }>
   }
+  pdf: {
+    /** 工具箱：PDF 工具（pdf:* 命名空间；路径须来自本会话对话框选择，主进程仅 IO 壳） */
+    pickFiles: () => Promise<{
+      canceled: boolean
+      files?: { path: string; name: string; size: number }[]
+    }>
+    pickPdf: () => Promise<
+      | { canceled: true }
+      | { canceled: false; path: string; name: string; size: number; pageCount: number | null }
+    >
+    pickImages: () => Promise<{
+      canceled: boolean
+      files?: { path: string; name: string; size: number }[]
+    }>
+    readBytes: (args: { path: string }) => Promise<{ base64: string; size: number }>
+    savePdf: (args: { base64: string; suggestedName: string }) => Promise<{
+      canceled: boolean
+      saved?: string
+    }>
+    saveFiles: (args: { items: { name: string; base64: string }[] }) => Promise<{
+      canceled: boolean
+      saved: string[]
+    }>
+    imagesToPdf: (args: { paths: string[]; pageSize: 'auto' | 'a4' }) => Promise<{
+      canceled: boolean
+      saved?: string
+      pages?: number
+    }>
+  }
   backup: {
     /** 工具箱：文件夹备份（backup:* 命名空间；源/目标路径须来自本会话对话框选择） */
     pickSource: () => Promise<{

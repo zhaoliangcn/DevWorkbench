@@ -165,6 +165,18 @@ const api = {
     save: (args: { items: { name: string; base64: string }[]; defaultDir?: string }) =>
       ipcRenderer.invoke('iconconvert:save', args),
   },
+  pdf: {
+    /** 工具箱：PDF 工具（pdf:*，主进程 IO 壳；合并/拆分引擎在渲染层 pure/pdf.ts） */
+    pickFiles: () => ipcRenderer.invoke('pdf:pickFiles'),
+    pickPdf: () => ipcRenderer.invoke('pdf:pickPdf'),
+    pickImages: () => ipcRenderer.invoke('pdf:pickImages'),
+    readBytes: (args: { path: string }) => ipcRenderer.invoke('pdf:readBytes', args),
+    savePdf: (args: { base64: string; suggestedName: string }) => ipcRenderer.invoke('pdf:savePdf', args),
+    saveFiles: (args: { items: { name: string; base64: string }[] }) =>
+      ipcRenderer.invoke('pdf:saveFiles', args),
+    imagesToPdf: (args: { paths: string[]; pageSize: 'auto' | 'a4' }) =>
+      ipcRenderer.invoke('pdf:imagesToPdf', args),
+  },
   backup: {
     /** 工具箱：文件夹备份（backup:*，主进程异步遍历 + 逐文件复制，进度推送与取消） */
     pickSource: () => ipcRenderer.invoke('backup:pickSource'),

@@ -40,6 +40,7 @@ export const TOOLBOX_MODULES: ToolboxModule[] = [
   { id: 'cron', name: 'Cron 可视化', icon: '⏰', category: 'system' },
   { id: 'imagetool', name: '图片工具', icon: '🖼️', category: 'file' },
   { id: 'iconconvert', name: '图标转换', icon: '🎨', category: 'file' },
+  { id: 'pdf', name: 'PDF 工具', icon: '📕', category: 'file' },
   { id: 'backup', name: '文件夹备份', icon: '💾', category: 'file' },
   { id: 'snippets', name: '代码片段', icon: '📝', category: 'devtools' },
   { id: 'notes', name: '随手记', icon: '💡', category: 'devtools' },
