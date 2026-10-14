@@ -332,6 +332,51 @@ interface ElectronAPI {
       saved: string[]
     }>
   }
+  backup: {
+    /** 工具箱：文件夹备份（backup:* 命名空间；源/目标路径须来自本会话对话框选择） */
+    pickSource: () => Promise<{
+      canceled: boolean
+      path?: string
+      name?: string
+      /** 主进程生成的默认备份名（源目录名 + 时间戳） */
+      suggestedName?: string
+    }>
+    pickTarget: () => Promise<{ canceled: boolean; path?: string }>
+    estimate: (args: { sourcePath: string; excludes?: BackupExcludesInput }) => Promise<{
+      fileCount: number
+      totalBytes: number
+      skippedFiles: number
+      skippedDirs: number
+      skippedSymlinks: number
+      errorCount: number
+    }>
+    run: (args: {
+      sourcePath: string
+      targetDir: string
+      backupName: string
+      excludes?: BackupExcludesInput
+      overwrite?: boolean
+      /** 备份后压缩为 zip（完成后移除临时文件夹） */
+      zip?: boolean
+    }) => Promise<{
+      canceled?: boolean
+      /** zip 模式下为压缩包路径，否则为备份文件夹路径 */
+      destPath: string
+      /** 压缩包路径（未勾选 zip 时为 null） */
+      zipPath?: string | null
+      totalFound: number
+      copied: number
+      copiedBytes: number
+      skippedFiles: number
+      skippedDirs: number
+      skippedSymlinks: number
+      errors: string[]
+      durationMs: number
+    }>
+    cancel: () => Promise<boolean>
+    /** 复制进度实时推送（约 250ms 节流）；返回取消订阅函数 */
+    onProgress: (callback: (p: BackupProgress) => void) => () => void
+  }
   data: {
     save: (key: string, data: unknown) => Promise<boolean>
     load: (key: string) => Promise<unknown>
@@ -439,6 +484,22 @@ interface ExplorerEntry {
   relPath: string
   kind: 'file' | 'dir'
   size: number
+}
+
+/** backup:* 排除规则输入（files/dirs 精确名；patterns 通配符 * ** ?） */
+interface BackupExcludesInput {
+  files?: string[]
+  dirs?: string[]
+  patterns?: string[]
+}
+
+/** backup:progress 实时进度（phase=scan 时 total/copied 无意义） */
+interface BackupProgress {
+  phase: 'scan' | 'copy' | 'zip'
+  total: number
+  copied: number
+  /** 当前处理的相对路径 */
+  current: string
 }
 
 /** explorer:read 结果：text 可编辑 / binary 二进制（非图片走占位）/ tooLarge 超文本上限 */

@@ -8,6 +8,7 @@ import { registerFileIpc } from './ipc/file.js'
 import { registerDirIpc } from './ipc/dir.js'
 import { registerToolboxIpc } from './ipc/index.js'
 import { registerIconConvertIpc } from './ipc/icon-convert.js'
+import { registerBackupIpc } from './ipc/backup.js'
 import { registerHttpIpc } from './ipc/http.js'
 import { registerWebhookIpc, stopWebhookServer } from './ipc/webhook.js'
 import { registerCronIpc, stopCronScheduler } from './ipc/cron.js'
@@ -86,6 +87,8 @@ app.whenReady().then(async () => {
   registerToolboxIpc()
   // 工具箱：图标格式转换（iconconvert:*）
   registerIconConvertIpc()
+  // 工具箱：文件夹备份（backup:* 命名空间）
+  registerBackupIpc()
   // 附录 F F.2: HTTP 请求下沉主进程（http:request）
   registerHttpIpc()
   // 附录 F F.3: Webhook 接收器（webhook:* 命名空间）

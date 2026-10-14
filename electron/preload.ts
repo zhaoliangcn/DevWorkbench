@@ -165,6 +165,20 @@ const api = {
     save: (args: { items: { name: string; base64: string }[]; defaultDir?: string }) =>
       ipcRenderer.invoke('iconconvert:save', args),
   },
+  backup: {
+    /** 工具箱：文件夹备份（backup:*，主进程异步遍历 + 逐文件复制，进度推送与取消） */
+    pickSource: () => ipcRenderer.invoke('backup:pickSource'),
+    pickTarget: () => ipcRenderer.invoke('backup:pickTarget'),
+    estimate: (args: { sourcePath: string; excludes?: unknown }) => ipcRenderer.invoke('backup:estimate', args),
+    run: (args: { sourcePath: string; targetDir: string; backupName: string; excludes?: unknown; overwrite?: boolean; zip?: boolean }) =>
+      ipcRenderer.invoke('backup:run', args),
+    cancel: () => ipcRenderer.invoke('backup:cancel'),
+    onProgress: (callback: (p: unknown) => void) => {
+      const listener = (_event: unknown, p: unknown) => callback(p)
+      ipcRenderer.on('backup:progress', listener)
+      return () => ipcRenderer.removeListener('backup:progress', listener)
+    },
+  },
   data: {
     save: (key: string, data: unknown) => ipcRenderer.invoke('data:save', key, data),
     load: (key: string) => ipcRenderer.invoke('data:load', key),
