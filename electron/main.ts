@@ -10,6 +10,7 @@ import { registerToolboxIpc } from './ipc/index.js'
 import { registerIconConvertIpc } from './ipc/icon-convert.js'
 import { registerPdfIpc } from './ipc/pdf.js'
 import { registerBackupIpc } from './ipc/backup.js'
+import { registerAlarmIpc } from './ipc/alarm.js'
 import { registerHttpIpc } from './ipc/http.js'
 import { registerWebhookIpc, stopWebhookServer } from './ipc/webhook.js'
 import { registerCronIpc, stopCronScheduler } from './ipc/cron.js'
@@ -77,6 +78,8 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Windows 系统通知（Notification toast）需要正确的 AppUserModelID
+  app.setAppUserModelId('com.devworkbench.app')
   await ensureVault()
   startVaultWatcher() // vault 监听（附录 E E.3.6）：外部变更 → vault:changed 推送
 
@@ -92,6 +95,8 @@ app.whenReady().then(async () => {
   registerPdfIpc()
   // 工具箱：文件夹备份（backup:* 命名空间）
   registerBackupIpc()
+  // 工具箱：闹钟提醒（alarm:* 命名空间，主进程调度 + 系统通知）
+  registerAlarmIpc()
   // 附录 F F.2: HTTP 请求下沉主进程（http:request）
   registerHttpIpc()
   // 附录 F F.3: Webhook 接收器（webhook:* 命名空间）

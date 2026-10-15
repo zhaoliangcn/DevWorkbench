@@ -27,6 +27,45 @@ interface FileSystemWritableFileStream extends WritableStream {
   truncate(size: number): Promise<void>
 }
 
+/** 工具箱：指定时刻闹钟（HH:MM，可每日重复） */
+interface ScheduledAlarmInfo {
+  id: string
+  hh: number
+  mm: number
+  label: string
+  repeatDaily: boolean
+  enabled: boolean
+  /** 下次触发时间（epoch ms），由主进程维护 */
+  nextFireAt: number
+}
+
+/** 工具箱：免打扰时段（startMin/endMin 为一天内分钟偏移，支持跨零点） */
+interface DndInfo {
+  enabled: boolean
+  startMin: number
+  endMin: number
+}
+
+/** 工具箱：闹钟提醒状态快照（alarm:changed 推送 / alarm:getState 返回） */
+interface AlarmSnapshot {
+  /** 番茄钟运行态；null = 未开始 */
+  pomodoro: {
+    phase: 'work' | 'break' | 'longBreak'
+    round: number
+    /** 本阶段结束时间（epoch ms），暂停期间冻结 */
+    endAt: number
+    pausedRemainingMs: number | null
+  } | null
+  oneShots: { id: string; label: string; endAt: number }[]
+  /** 指定时刻闹钟列表 */
+  scheduledAlarms: ScheduledAlarmInfo[]
+  /** 免打扰时段配置 */
+  dnd: DndInfo
+  config: { workMin: number; breakMin: number; longBreakMin: number; roundsBeforeLong: number }
+  /** 主进程生成快照的时刻（渲染层可据此校准时钟偏差） */
+  now: number
+}
+
 interface Window {
   showDirectoryPicker(options?: {
     mode?: 'read' | 'readwrite'
@@ -360,6 +399,27 @@ interface ElectronAPI {
       saved?: string
       pages?: number
     }>
+  }
+  alarm: {
+    /** 工具箱：闹钟提醒（alarm:* 命名空间；调度在主进程，状态经 alarm:changed 推送） */
+    pomodoroStart: (args: {
+      config?: { workMin: number; breakMin: number; longBreakMin: number; roundsBeforeLong: number }
+    }) => Promise<AlarmSnapshot>
+    pomodoroPause: () => Promise<AlarmSnapshot>
+    pomodoroResume: () => Promise<AlarmSnapshot>
+    pomodoroSkip: () => Promise<AlarmSnapshot>
+    pomodoroStop: () => Promise<AlarmSnapshot>
+    oneshotAdd: (args: { minutes: number; label: string }) => Promise<AlarmSnapshot>
+    oneshotRemove: (args: { id: string }) => Promise<AlarmSnapshot>
+    scheduledAdd: (args: { hh: number; mm: number; label: string; repeatDaily: boolean }) => Promise<AlarmSnapshot>
+    scheduledRemove: (args: { id: string }) => Promise<AlarmSnapshot>
+    scheduledToggle: (args: { id: string; enabled: boolean }) => Promise<AlarmSnapshot>
+    dndSet: (args: { enabled: boolean; startMin: number; endMin: number }) => Promise<AlarmSnapshot>
+    /** 开机自启（登录启动项）当前状态 */
+    autoLaunchGet: () => Promise<boolean>
+    autoLaunchSet: (args: { enabled: boolean }) => Promise<boolean>
+    getState: () => Promise<AlarmSnapshot>
+    onAlarmChanged: (callback: (snapshot: AlarmSnapshot) => void) => () => void
   }
   backup: {
     /** 工具箱：文件夹备份（backup:* 命名空间；源/目标路径须来自本会话对话框选择） */

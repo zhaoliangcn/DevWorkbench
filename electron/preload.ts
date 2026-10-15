@@ -191,6 +191,30 @@ const api = {
       return () => ipcRenderer.removeListener('backup:progress', listener)
     },
   },
+  alarm: {
+    /** 工具箱：闹钟提醒（alarm:*，主进程调度 + 系统通知；状态变化经 alarm:changed 广播） */
+    getState: () => ipcRenderer.invoke('alarm:getState'),
+    pomodoroStart: (args: { config?: { workMin: number; breakMin: number; longBreakMin: number; roundsBeforeLong: number } }) =>
+      ipcRenderer.invoke('alarm:pomodoroStart', args),
+    pomodoroPause: () => ipcRenderer.invoke('alarm:pomodoroPause'),
+    pomodoroResume: () => ipcRenderer.invoke('alarm:pomodoroResume'),
+    pomodoroSkip: () => ipcRenderer.invoke('alarm:pomodoroSkip'),
+    pomodoroStop: () => ipcRenderer.invoke('alarm:pomodoroStop'),
+    oneshotAdd: (args: { minutes: number; label: string }) => ipcRenderer.invoke('alarm:oneshotAdd', args),
+    oneshotRemove: (args: { id: string }) => ipcRenderer.invoke('alarm:oneshotRemove', args),
+    scheduledAdd: (args: { hh: number; mm: number; label: string; repeatDaily: boolean }) =>
+      ipcRenderer.invoke('alarm:scheduledAdd', args),
+    scheduledRemove: (args: { id: string }) => ipcRenderer.invoke('alarm:scheduledRemove', args),
+    scheduledToggle: (args: { id: string; enabled: boolean }) => ipcRenderer.invoke('alarm:scheduledToggle', args),
+    dndSet: (args: { enabled: boolean; startMin: number; endMin: number }) => ipcRenderer.invoke('alarm:dndSet', args),
+    autoLaunchGet: () => ipcRenderer.invoke('alarm:autoLaunchGet'),
+    autoLaunchSet: (args: { enabled: boolean }) => ipcRenderer.invoke('alarm:autoLaunchSet', args),
+    onAlarmChanged: (callback: (snapshot: unknown) => void) => {
+      const listener = (_event: unknown, snapshot: unknown) => callback(snapshot)
+      ipcRenderer.on('alarm:changed', listener)
+      return () => ipcRenderer.removeListener('alarm:changed', listener)
+    },
+  },
   data: {
     save: (key: string, data: unknown) => ipcRenderer.invoke('data:save', key, data),
     load: (key: string) => ipcRenderer.invoke('data:load', key),

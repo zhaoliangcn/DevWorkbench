@@ -29,6 +29,7 @@ import { ImageTool } from './tools/ImageTool'
 import { IconConvertTool } from './tools/IconConvertTool'
 import { PdfTool } from './tools/PdfTool'
 import { BackupTool } from './tools/BackupTool'
+import { AlarmTool } from './tools/AlarmTool'
 import { SnippetsModule } from './tools/SnippetsModule'
 import { NotesModule } from './tools/NotesModule'
 import { SystemModule } from './tools/SystemModule'
@@ -80,6 +81,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('iconconvert', IconConvertTool),
   defineToolboxModule('pdf', PdfTool),
   defineToolboxModule('backup', BackupTool),
+  defineToolboxModule('alarm', AlarmTool),
   defineToolboxModule('snippets', SnippetsModule),
   defineToolboxModule('notes', NotesModule),
   defineToolboxModule('system', SystemModule),
