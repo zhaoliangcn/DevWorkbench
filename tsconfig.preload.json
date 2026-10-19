@@ -16,5 +16,5 @@
     "sourceMap": true,
     "types": ["node"]
   },
-  "include": ["electron/preload.ts"]
+  "include": ["electron/preload.ts", "electron/reminder-preload.ts"]
 }

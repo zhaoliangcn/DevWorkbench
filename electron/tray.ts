@@ -30,8 +30,8 @@ export interface TrayController {
 let tray: Tray | null = null
 let controller: TrayController | null = null
 
-/** 32x32 BGRA 像素绘制托盘图标：蓝色圆角方块 + 白色铃铛 */
-function createTrayIcon() {
+/** 32x32 BGRA 像素绘制托盘图标：圆角方块 + 白色铃铛（默认蓝色，提醒态传红色） */
+function createTrayIcon(br = 0x3b, bg = 0x82, bb = 0xf6) {
   const size = 32
   const buf = Buffer.alloc(size * size * 4)
   const set = (x: number, y: number, r: number, g: number, b: number, a = 255) => {
@@ -47,7 +47,7 @@ function createTrayIcon() {
     for (let x = 0; x < size; x++) {
       const dx = Math.max(radius - x, x - (size - 1 - radius), 0)
       const dy = Math.max(radius - y, y - (size - 1 - radius), 0)
-      if (Math.hypot(dx, dy) <= radius) set(x, y, 0x3b, 0x82, 0xf6)
+      if (Math.hypot(dx, dy) <= radius) set(x, y, br, bg, bb)
     }
   }
   const cx = 16
@@ -109,6 +109,29 @@ export function rebuildTrayMenu() {
 /** 托盘 tooltip 更新（alarm.ts 每秒推送番茄钟倒计时） */
 export function updateTrayTooltip(text: string) {
   tray?.setToolTip(text)
+}
+
+// ---------- 提醒闪烁：蓝/红图标交替，直到用户处理（处理动作/主窗聚焦时停止） ----------
+
+let flashTimer: NodeJS.Timeout | null = null
+let flashPhase = false
+
+/** 设置托盘提醒闪烁（幂等）：active=true 开始交替，false 恢复常驻图标 */
+export function setTrayAlertFlash(active: boolean) {
+  if (!tray) return
+  if (active) {
+    if (flashTimer) return
+    flashPhase = true
+    tray.setImage(createTrayIcon(0xe5, 0x48, 0x4d))
+    flashTimer = setInterval(() => {
+      flashPhase = !flashPhase
+      tray?.setImage(flashPhase ? createTrayIcon() : createTrayIcon(0xe5, 0x48, 0x4d))
+    }, 500)
+  } else if (flashTimer) {
+    clearInterval(flashTimer)
+    flashTimer = null
+    tray.setImage(createTrayIcon())
+  }
 }
 
 export function initTray(ctrl: TrayController) {

@@ -68,15 +68,21 @@ export function AlarmTool() {
   const [alarmLabel, setAlarmLabel] = useState('')
   const [alarmRepeat, setAlarmRepeat] = useState(true)
   const [dndForm, setDndForm] = useState({ enabled: false, start: '22:00', end: '08:00' })
+  const [alertsForm, setAlertsForm] = useState<AlertPrefsInfo>({ voice: true, voiceRate: 0, card: true, trayFlash: true })
   const [autoLaunch, setAutoLaunch] = useState(false)
   const unlistenRef = useRef<(() => void) | null>(null)
   const dndInitedRef = useRef(false)
+  const alertsInitedRef = useRef(false)
 
   // 首次拿到快照时，用已保存的免打扰配置初始化表单（此后广播不覆盖用户编辑）
   useEffect(() => {
     if (snap && !dndInitedRef.current) {
       dndInitedRef.current = true
       setDndForm({ enabled: snap.dnd.enabled, start: minToTime(snap.dnd.startMin), end: minToTime(snap.dnd.endMin) })
+    }
+    if (snap && !alertsInitedRef.current) {
+      alertsInitedRef.current = true
+      setAlertsForm({ ...snap.alerts })
     }
   }, [snap])
 
@@ -147,6 +153,12 @@ export function AlarmTool() {
       if (!s || !e) throw new Error('免打扰时段需为有效的 HH:MM')
       return api.dndSet({ enabled: dndForm.enabled, startMin: s.hh * 60 + s.mm, endMin: e.hh * 60 + e.mm })
     })
+  // 提醒效果改动即保存（主进程合并清洗后广播新快照）
+  const saveAlerts = (next: AlertPrefsInfo) => {
+    setAlertsForm(next)
+    void act((api) => api.alertsSet(next))
+  }
+  const testVoice = () => act((api) => api.voiceTest())
   const toggleAutoLaunch = async (enabled: boolean) => {
     const api = window.electronAPI?.alarm
     if (!api) return
@@ -361,6 +373,58 @@ export function AlarmTool() {
             </button>
           </div>
           <p className="hint">免打扰期间新到提醒静默入队（最多保留 20 条），时段结束后汇总补发；支持跨零点时段（如 22:00–08:00）</p>
+        </div>
+
+        {/* 提醒效果 */}
+        <div className="tool-section">
+          <h4>提醒效果</h4>
+          <div className="form-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={alertsForm.voice}
+                onChange={(e) => saveAlerts({ ...alertsForm, voice: e.target.checked })}
+              />{' '}
+              语音播报
+            </label>
+            <select
+              value={alertsForm.voiceRate}
+              onChange={(e) => saveAlerts({ ...alertsForm, voiceRate: Number(e.target.value) })}
+              style={{ width: 90 }}
+            >
+              <option value={-4}>很慢</option>
+              <option value={-2}>慢速</option>
+              <option value={0}>正常</option>
+              <option value={2}>快速</option>
+              <option value={4}>很快</option>
+            </select>
+            <button onClick={testVoice} disabled={busy}>
+              试听
+            </button>
+          </div>
+          <div className="form-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={alertsForm.card}
+                onChange={(e) => saveAlerts({ ...alertsForm, card: e.target.checked })}
+              />{' '}
+              桌面提醒卡（右下角滑入，可「稍后 5 分钟」）
+            </label>
+          </div>
+          <div className="form-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={alertsForm.trayFlash}
+                onChange={(e) => saveAlerts({ ...alertsForm, trayFlash: e.target.checked })}
+              />{' '}
+              托盘图标闪烁
+            </label>
+          </div>
+          <p className="hint">
+            到点在系统通知之外追加：语音朗读、右下角提醒卡（60 秒自动关闭，弹出不抢焦点）、托盘闪烁（点开任意窗口后停止）；三项独立开关，免打扰期间不触发
+          </p>
         </div>
 
         {/* 应用 */}

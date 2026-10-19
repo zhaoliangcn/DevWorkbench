@@ -207,6 +207,9 @@ const api = {
     scheduledRemove: (args: { id: string }) => ipcRenderer.invoke('alarm:scheduledRemove', args),
     scheduledToggle: (args: { id: string; enabled: boolean }) => ipcRenderer.invoke('alarm:scheduledToggle', args),
     dndSet: (args: { enabled: boolean; startMin: number; endMin: number }) => ipcRenderer.invoke('alarm:dndSet', args),
+    alertsSet: (args: { voice?: boolean; voiceRate?: number; card?: boolean; trayFlash?: boolean }) =>
+      ipcRenderer.invoke('alarm:alertsSet', args),
+    voiceTest: () => ipcRenderer.invoke('alarm:voiceTest'),
     autoLaunchGet: () => ipcRenderer.invoke('alarm:autoLaunchGet'),
     autoLaunchSet: (args: { enabled: boolean }) => ipcRenderer.invoke('alarm:autoLaunchSet', args),
     onAlarmChanged: (callback: (snapshot: unknown) => void) => {

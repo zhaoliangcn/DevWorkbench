@@ -46,6 +46,18 @@ interface DndInfo {
   endMin: number
 }
 
+/** 工具箱：增强提醒偏好（语音播报 / 桌面提醒卡 / 托盘闪烁，可分别开关） */
+interface AlertPrefsInfo {
+  /** 语音播报开关 */
+  voice: boolean
+  /** 语速：-10~10，0 为正常（Windows SAPI Rate） */
+  voiceRate: number
+  /** 桌面提醒卡（右下角滑入卡片）开关 */
+  card: boolean
+  /** 托盘图标闪烁开关 */
+  trayFlash: boolean
+}
+
 /** 工具箱：闹钟提醒状态快照（alarm:changed 推送 / alarm:getState 返回） */
 interface AlarmSnapshot {
   /** 番茄钟运行态；null = 未开始 */
@@ -61,6 +73,8 @@ interface AlarmSnapshot {
   scheduledAlarms: ScheduledAlarmInfo[]
   /** 免打扰时段配置 */
   dnd: DndInfo
+  /** 增强提醒偏好 */
+  alerts: AlertPrefsInfo
   config: { workMin: number; breakMin: number; longBreakMin: number; roundsBeforeLong: number }
   /** 主进程生成快照的时刻（渲染层可据此校准时钟偏差） */
   now: number
@@ -415,6 +429,10 @@ interface ElectronAPI {
     scheduledRemove: (args: { id: string }) => Promise<AlarmSnapshot>
     scheduledToggle: (args: { id: string; enabled: boolean }) => Promise<AlarmSnapshot>
     dndSet: (args: { enabled: boolean; startMin: number; endMin: number }) => Promise<AlarmSnapshot>
+    /** 更新增强提醒偏好（部分字段合并保存），返回新快照 */
+    alertsSet: (args: { voice?: boolean; voiceRate?: number; card?: boolean; trayFlash?: boolean }) => Promise<AlarmSnapshot>
+    /** 语音播报测试（忽略开关直接播报当前语速） */
+    voiceTest: () => Promise<AlarmSnapshot>
     /** 开机自启（登录启动项）当前状态 */
     autoLaunchGet: () => Promise<boolean>
     autoLaunchSet: (args: { enabled: boolean }) => Promise<boolean>

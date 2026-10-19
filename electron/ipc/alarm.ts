@@ -2,6 +2,7 @@ import { ipcMain, Notification, powerMonitor, BrowserWindow, app } from 'electro
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { spawn, type ChildProcess } from 'node:child_process'
 import {
   advancePomodoro,
   createPomodoro,
@@ -21,7 +22,14 @@ import {
   type PomodoroState,
   type ScheduledAlarm,
 } from '../alarm-core.js'
-import { initTray, rebuildTrayMenu, updateTrayTooltip } from '../tray.js'
+import {
+  buildSpeakCommand,
+  DEFAULT_ALERT_PREFS,
+  sanitizeAlertPrefs,
+  type AlertPrefs,
+} from '../alarm-alerts.js'
+import { initReminderCard, showReminderCard } from '../alarm-reminder.js'
+import { initTray, rebuildTrayMenu, setTrayAlertFlash, updateTrayTooltip } from '../tray.js'
 
 // 工具箱：闹钟提醒（alarm:* 命名空间）
 // 定时调度留在主进程（渲染进程后台会被 Chromium 节流）：
@@ -33,6 +41,8 @@ import { initTray, rebuildTrayMenu, updateTrayTooltip } from '../tray.js'
 //   跨零点时段（如 22:00–08:00）已支持
 // - 唤醒（powerMonitor.resume）后立即补偿触发并重排
 // - 托盘：图标常驻，tooltip 秒级倒计时，菜单快捷控制 + 开机自启
+// - 增强提醒（可分别开关，alerts 配置持久化）：
+//   语音播报（TTS）→ 右下角桌面提醒卡（滑入动画，可稍后 5 分钟）→ 托盘图标闪烁
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'alarm-config.json')
 const MAX_ONESHOTS = 20
@@ -44,6 +54,7 @@ interface PersistedConfig {
   oneShots: OneShot[]
   scheduledAlarms: ScheduledAlarm[]
   dnd: DndConfig
+  alerts: AlertPrefs
 }
 
 let pomodoroConfig: PomodoroConfig = { ...DEFAULT_POMODORO_CONFIG }
@@ -51,9 +62,11 @@ let pomodoro: PomodoroState | null = null // null = idle
 let oneShots: OneShot[] = []
 let scheduledAlarms: ScheduledAlarm[] = []
 let dnd: DndConfig = { ...DEFAULT_DND_CONFIG }
+let alerts: AlertPrefs = { ...DEFAULT_ALERT_PREFS }
 let notifyQueue: { title: string; body: string; at: number }[] = []
 let timer: NodeJS.Timeout | null = null
 let tooltipTimer: NodeJS.Timeout | null = null
+let speakProc: ChildProcess | null = null
 
 const fmtHm = (hh: number, mm: number) => `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 const fmtHmAt = (ts: number) => {
@@ -96,6 +109,7 @@ function loadPersisted(now: number): PersistedConfig {
             })
         : [],
       dnd: sanitizeDnd(raw.dnd),
+      alerts: sanitizeAlertPrefs(raw.alerts),
     }
   } catch {
     return {
@@ -103,12 +117,13 @@ function loadPersisted(now: number): PersistedConfig {
       oneShots: [],
       scheduledAlarms: [],
       dnd: { ...DEFAULT_DND_CONFIG },
+      alerts: { ...DEFAULT_ALERT_PREFS },
     }
   }
 }
 
 function persist() {
-  const data: PersistedConfig = { pomodoroConfig, oneShots, scheduledAlarms, dnd }
+  const data: PersistedConfig = { pomodoroConfig, oneShots, scheduledAlarms, dnd, alerts }
   try {
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2))
   } catch {
@@ -117,7 +132,7 @@ function persist() {
 }
 
 function snapshot() {
-  return { pomodoro, oneShots, scheduledAlarms, dnd, config: pomodoroConfig, now: Date.now() }
+  return { pomodoro, oneShots, scheduledAlarms, dnd, alerts, config: pomodoroConfig, now: Date.now() }
 }
 
 function broadcast() {
@@ -160,7 +175,29 @@ function notify(title: string, body: string) {
   if (win && !win.isDestroyed()) win.flashFrame(true)
 }
 
-/** 免打扰期间静默入队（保留最近 MAX_QUEUE 条），否则立即系统通知 */
+/** 语音播报：经 alarm-alerts 构造平台命令后启动子进程；失败静默（不影响提醒主流程） */
+function speak(text: string) {
+  const cmd = buildSpeakCommand(text, alerts.voiceRate, process.platform)
+  if (!cmd) return
+  speakProc?.kill() // 新播报打断上一段，避免多进程叠声
+  try {
+    const child = spawn(cmd.file, cmd.args, { stdio: 'ignore', windowsHide: true })
+    child.on('error', () => {}) // 无 TTS 环境（如精简版 Windows）等错误不外泄
+    child.unref()
+    speakProc = child
+  } catch {
+    // spawn 失败忽略
+  }
+}
+
+/** 增强提醒：托盘闪烁 + 桌面提醒卡 + 语音（各自受开关控制；免打扰期间不调用） */
+function announce(title: string, body: string) {
+  if (alerts.trayFlash) setTrayAlertFlash(true)
+  if (alerts.card) showReminderCard({ title, body })
+  if (alerts.voice) speak(`${title}，${body}`) // 整段文案在 buildSpeakCommand 内统一清洗
+}
+
+/** 免打扰期间静默入队（保留最近 MAX_QUEUE 条），否则立即系统通知 + 增强提醒 */
 function notifyOrQueue(title: string, body: string) {
   const now = Date.now()
   if (isInDnd(now, dnd)) {
@@ -169,6 +206,7 @@ function notifyOrQueue(title: string, body: string) {
     return
   }
   notify(title, body)
+  announce(title, body)
 }
 
 /** 免打扰结束后汇总补发积压提醒 */
@@ -314,12 +352,29 @@ export function registerAlarmIpc() {
   oneShots = saved.oneShots
   scheduledAlarms = saved.scheduledAlarms
   dnd = saved.dnd
+  alerts = saved.alerts
 
-  // 任务栏闪烁在窗口获得焦点时自动停止
-  BrowserWindow.getAllWindows().forEach((win) => {
-    win.on('focus', () => {
-      if (!win.isDestroyed()) win.flashFrame(false)
-    })
+  // 任务栏/托盘闪烁在任意窗口获得焦点时停止（提醒卡 focusable:false 不会触发）
+  app.on('browser-window-focus', (_event, win) => {
+    if (!win.isDestroyed()) win.flashFrame(false)
+    setTrayAlertFlash(false)
+  })
+
+  // 提醒卡动作：稍后 → 5 分钟后按原内容重排；知道了 → 仅关闭（托盘闪烁一并停止）
+  initReminderCard((action, payload) => {
+    setTrayAlertFlash(false)
+    if (action === 'snooze') {
+      try {
+        addOneShot(5, payload.body || '稍后提醒')
+      } catch {
+        // 队列已满等异常：提醒卡操作无 UI 反馈渠道
+      }
+    }
+  })
+
+  // 退出时结束未完的语音播报子进程（子进程不随主进程退出自动终止）
+  app.on('before-quit', () => {
+    speakProc?.kill()
   })
 
   // 睡眠/休眠唤醒：立即补偿触发所有过期任务并重排 setTimeout
@@ -406,6 +461,20 @@ export function registerAlarmIpc() {
   })
 
   ipcMain.handle('alarm:dndToggle', () => actDndToggle())
+
+  // 增强提醒偏好（语音/语速/提醒卡/托盘闪烁）：合并保存并广播
+  ipcMain.handle('alarm:alertsSet', (_event, args: Partial<AlertPrefs>) => {
+    alerts = sanitizeAlertPrefs({ ...alerts, ...(args ?? {}) })
+    persist()
+    broadcast()
+    return snapshot()
+  })
+
+  // 语音测试：忽略开关直接播报，便于用户在设置里试听效果
+  ipcMain.handle('alarm:voiceTest', () => {
+    speak('语音播报测试。闹钟提醒已就绪。')
+    return snapshot()
+  })
 
   // 开机自启：注册当前可执行文件的登录启动项（开发模式下注册的是 electron.exe）
   ipcMain.handle('alarm:autoLaunchGet', () => app.getLoginItemSettings().openAtLogin)

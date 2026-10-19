@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'"
+  />
+  <title>提醒</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: transparent; overflow: hidden; user-select: none; }
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+      padding: 8px;
+    }
+    .card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 18px 26px;
+      border-radius: 14px;
+      background: rgba(22, 26, 34, 0.96);
+      border: 1px solid rgba(99, 130, 255, 0.35);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      color: #e8ecf4;
+      animation: slide-in 0.45s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+      overflow: hidden;
+    }
+    /* 铃铛：持续轻摆提醒注意力 */
+    .bell {
+      flex: none;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      transform-origin: 50% 8%;
+      animation: swing 1.6s ease-in-out infinite;
+    }
+    .bell svg { width: 26px; height: 26px; fill: #fff; }
+    .content { flex: 1; min-width: 0; }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(232, 236, 244, 0.78);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
+    }
+    .actions { flex: none; display: flex; flex-direction: column; gap: 8px; }
+    button {
+      font: inherit;
+      font-size: 13px;
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s, transform 0.1s;
+    }
+    button:hover { filter: brightness(1.15); }
+    button:active { transform: scale(0.96); }
+    .btn-dismiss { background: #3b82f6; color: #fff; }
+    .btn-snooze { background: rgba(255, 255, 255, 0.1); color: rgba(232, 236, 244, 0.85); }
+    /* 自动关闭倒计时进度条（60s 走完） */
+    .progress {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 3px;
+      width: 100%;
+      background: linear-gradient(90deg, #3b82f6, #6366f1);
+      transform-origin: left;
+      animation: countdown 60s linear both;
+    }
+    @keyframes slide-in {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes swing {
+      0%, 100% { transform: rotate(0deg); }
+      20% { transform: rotate(14deg); }
+      45% { transform: rotate(-12deg); }
+      70% { transform: rotate(7deg); }
+      85% { transform: rotate(-4deg); }
+    }
+    @keyframes countdown {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="bell" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2a1.5 1.5 0 0 1 1.5 1.5v.7A6.5 6.5 0 0 1 18.5 10v4.2c0 .6.2 1.2.6 1.7l1.1 1.4a1 1 0 0 1-.8 1.7h-15a1 1 0 0 1-.8-1.7l1.1-1.4c.4-.5.6-1.1.6-1.7V10a6.5 6.5 0 0 1 5-6.3v-.7A1.5 1.5 0 0 1 12 2zm-2.4 18h4.8a2.4 2.4 0 0 1-4.8 0z" />
+      </svg>
+    </div>
+    <div class="content">
+      <div class="title" id="rtitle">提醒</div>
+      <div class="body" id="rbody"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-dismiss" id="btnDismiss">知道了</button>
+      <button class="btn-snooze" id="btnSnooze">稍后 5 分钟</button>
+    </div>
+    <div class="progress"></div>
+  </div>
+  <script>
+    // 内容仅经 textContent 写入（query 参数不进 innerHTML，无注入面）
+    var params = new URLSearchParams(location.search)
+    document.getElementById('rtitle').textContent = params.get('title') || '提醒'
+    document.getElementById('rbody').textContent = params.get('body') || ''
+
+    var sent = false
+    function send(action) {
+      if (sent) return
+      sent = true
+      try {
+        window.reminderAPI && window.reminderAPI.action(action)
+      } catch (e) { /* 主进程桥不可用时兜底自关 */ }
+      if (!window.reminderAPI) {
+        try { window.close() } catch (e) {}
+      }
+    }
+    document.getElementById('btnDismiss').addEventListener('click', function () { send('dismiss') })
+    document.getElementById('btnSnooze').addEventListener('click', function () { send('snooze') })
+  </script>
+</body>
+</html>
