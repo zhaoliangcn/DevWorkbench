@@ -2,14 +2,14 @@
 // 命中即触发 HTTP 请求（复用 http:request handler）或本地脚本（exec，30s 超时）。
 // 任务持久化 data 键 'cron-tasks'；触发日志写 'agent-task-log'（与 B.3 定时任务看板同源），
 // 并经 'cron:log' 实时推送 renderer。Agent 任务触发留待 F.4c。
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { ipcMain, BrowserWindow, dialog, Notification } from 'electron'
 import { exec } from 'node:child_process'
 import crypto from 'node:crypto'
 import { parseCron, ruleMatches, type CronRule } from './cron-core.js'
 import { loadDataFile, saveDataFile } from './data.js'
 import { ringPush } from './webhook.js'
 import { httpRequestHandler } from './http.js'
-import { runAgentTask } from './assistant.js'
+import { runAgentTask, runLlmTask } from './assistant.js'
 
 export interface CronTargetHttp {
   type: 'http'
@@ -29,7 +29,13 @@ export interface CronTargetAgent {
   prompt: string
 }
 
-export type CronTarget = CronTargetHttp | CronTargetScript | CronTargetAgent
+/** 纯 LLM 推理目标：单次 completion，零工具零审批，不进 Agent 会话（F.4c） */
+export interface CronTargetLlm {
+  type: 'llm'
+  prompt: string
+}
+
+export type CronTarget = CronTargetHttp | CronTargetScript | CronTargetAgent | CronTargetLlm
 
 export interface CronTask {
   id: string
@@ -73,8 +79,10 @@ export function validateTasks(tasks: CronTask[]): string | null {
     } else if (t.target.type === 'script') {
       if (!t.target.command?.trim()) return `任务「${t.name}」：脚本命令不能为空`
       if (t.target.command.length > 2000) return `任务「${t.name}」：脚本命令过长（≤2000 字符）`
-    } else if (!t.target.prompt?.trim()) {
-      return `任务「${t.name}」：Agent 任务提示词不能为空`
+    } else if (t.target.type === 'agent') {
+      if (!t.target.prompt?.trim()) return `任务「${t.name}」：Agent 任务提示词不能为空`
+    } else if (t.target.type === 'llm') {
+      if (!t.target.prompt?.trim()) return `任务「${t.name}」：LLM 推理提示词不能为空`
     }
   }
   return null
@@ -148,6 +156,10 @@ export async function fireTarget(target: CronTarget): Promise<{ ok: boolean; det
     const r = await runAgentTask(target.prompt)
     return { ok: r.ok, detail: truncate(r.detail) }
   }
+  if (target.type === 'llm') {
+    const r = await runLlmTask(target.prompt)
+    return { ok: r.ok, detail: truncate(r.detail) }
+  }
   if (typeof target.command !== 'string' || !(await confirmScriptCommand(target.command))) {
     return { ok: false, detail: '脚本命令未获确认，已跳过执行' }
   }
@@ -207,7 +219,34 @@ function appendLog(entry: CronLogEntry): void {
   broadcast('cron:log', entry)
 }
 
-async function runTask(task: CronTask): Promise<CronLogEntry> {
+/** LLM 类任务（agent/llm）调度触发完成后发系统通知；点击唤起主窗口看日志详情 */
+function notifyTaskDone(taskName: string, ok: boolean, detail: string) {
+  try {
+    const n = new Notification({
+      title: `${ok ? '定时任务完成' : '定时任务失败'} · ${taskName}`,
+      body: truncate(detail, 160),
+      silent: false,
+    })
+    n.on('click', () => {
+      const win = BrowserWindow.getAllWindows()[0]
+      if (win && !win.isDestroyed()) {
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+      }
+    })
+    n.show()
+  } catch {
+    // 通知失败不影响调度主流程
+  }
+}
+
+/**
+ * 执行单个任务并产出日志条目。
+ * @param notify 调度触发传 true：LLM 类任务（agent/llm 耗时长、常无人值守）结束发系统通知；
+ *               手动触发（cron:trigger）传 false，用户在场无需打扰
+ */
+async function runTask(task: CronTask, notify = false): Promise<CronLogEntry> {
   const entry: CronLogEntry = {
     id: genId(),
     taskId: task.id,
@@ -224,6 +263,9 @@ async function runTask(task: CronTask): Promise<CronLogEntry> {
   } catch (e) {
     entry.detail = truncate((e as Error).message)
   }
+  if (notify && (task.target.type === 'agent' || task.target.type === 'llm')) {
+    notifyTaskDone(task.name, entry.ok, entry.detail)
+  }
   return entry
 }
 
@@ -236,7 +278,7 @@ function checkAndFire(now = new Date()): void {
     if (lastFired.get(t.id) === key) continue
     lastFired.set(t.id, key)
     t.lastRunAt = now.getTime()
-    void runTask(t).then(appendLog)
+    void runTask(t, true).then(appendLog)
   }
 }
 

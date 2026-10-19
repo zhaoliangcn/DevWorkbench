@@ -54,8 +54,12 @@ function fmtTime(ts: number): string {
 function targetSummary(t: CronTaskDef['target']): string {
   if (t.type === 'http') return `${t.method ?? 'GET'} ${t.url}`
   if (t.type === 'agent') return `Agent：${t.prompt}`
+  if (t.type === 'llm') return `LLM：${t.prompt}`
   return t.command
 }
+
+/** 目标类型标签（任务列表与日志共用） */
+const TARGET_LABEL: Record<string, string> = { http: 'HTTP', script: '脚本', agent: 'Agent', llm: 'LLM' }
 
 /** 附录 F：Cron 可视化（F.4a 解析/滑块/预览 + F.4b HTTP/脚本触发 + F.4c Agent 任务触发） */
 export function CronTool() {
@@ -68,7 +72,7 @@ export function CronTool() {
   // 新建任务表单
   const [name, setName] = useState('')
   const [taskExpr, setTaskExpr] = useState('*/15 * * * *')
-  const [targetType, setTargetType] = useState<'http' | 'script' | 'agent'>('http')
+  const [targetType, setTargetType] = useState<'http' | 'script' | 'agent' | 'llm'>('http')
   const [savedKey, setSavedKey] = useState('')
   const [url, setUrl] = useState('')
   const [method, setMethod] = useState('GET')
@@ -158,9 +162,12 @@ export function CronTool() {
     } else if (targetType === 'script') {
       if (!command.trim()) return setFormError('请填写本地脚本命令')
       target = { type: 'script', command: command.trim() }
-    } else {
+    } else if (targetType === 'agent') {
       if (!prompt.trim()) return setFormError('请填写 Agent 任务提示词')
       target = { type: 'agent', prompt: prompt.trim() }
+    } else {
+      if (!prompt.trim()) return setFormError('请填写 LLM 推理提示词')
+      target = { type: 'llm', prompt: prompt.trim() }
     }
     const task: CronTaskDef = { id: genId(), name: name.trim(), expr: taskExpr.trim(), target, enabled: true }
     void persistTasks([...tasks, task])
@@ -268,7 +275,7 @@ export function CronTool() {
               <div className="cron-task-head">
                 <input type="checkbox" checked={t.enabled} onChange={() => toggleTask(t)} title="启用/停用" />
                 <span className="cron-task-name">{t.name}</span>
-                <span className="cron-target-tag">{t.target.type === 'http' ? 'HTTP' : t.target.type === 'agent' ? 'Agent' : '脚本'}</span>
+                <span className="cron-target-tag">{TARGET_LABEL[t.target.type] ?? t.target.type}</span>
                 <span className="cron-task-expr">{t.expr}</span>
                 <button className="btn-secondary" onClick={() => void triggerTask(t)}>立即触发</button>
                 <button className="btn-secondary btn-danger-icon" onClick={() => removeTask(t)}>删除</button>
@@ -285,10 +292,11 @@ export function CronTool() {
           <div className="cron-add-row">
             <input className="cron-name-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="任务名称" />
             <input className="cron-expr-input" value={taskExpr} onChange={(e) => setTaskExpr(e.target.value)} placeholder="*/15 * * * *" spellCheck={false} />
-            <select value={targetType} onChange={(e) => setTargetType(e.target.value as 'http' | 'script' | 'agent')}>
+            <select value={targetType} onChange={(e) => setTargetType(e.target.value as 'http' | 'script' | 'agent' | 'llm')}>
               <option value="http">HTTP 请求</option>
               <option value="script">本地脚本</option>
               <option value="agent">Agent 任务</option>
+              <option value="llm">纯 LLM 推理</option>
             </select>
             <button className="btn-secondary" onClick={addTask}>新建任务</button>
           </div>
@@ -332,7 +340,11 @@ export function CronTool() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={2}
-                placeholder="Agent 提示词，如：检查今日待办并生成摘要（需 AI 助手页已启动；到点自动执行，手动触发需确认）"
+                placeholder={
+                  targetType === 'agent'
+                    ? 'Agent 提示词，如：检查今日待办并生成摘要（需 AI 助手页已启动；到点自动执行，手动触发需确认）'
+                    : 'LLM 推理提示词，如：总结知识库本周新增笔记为一句话摘要（单次推理零工具零审批；需 AI 助手页已启动）'
+                }
               />
             </div>
           )}
@@ -355,7 +367,7 @@ export function CronTool() {
               .map((l) => (
                 <div key={l.id} className="history-item cron-log-item">
                   <span className={`assert-chip ${l.ok ? 'pass' : 'fail'}`}>{l.ok ? '成功' : '失败'}</span>
-                  <span className="cron-target-tag">{l.target === 'http' ? 'HTTP' : l.target === 'agent' ? 'Agent' : '脚本'}</span>
+                  <span className="cron-target-tag">{TARGET_LABEL[l.target] ?? l.target}</span>
                   <span className="cron-task-name">{l.taskName}</span>
                   <span className="cron-log-detail" title={l.detail}>{l.detail}</span>
                   <span className="cron-log-time">{fmtTime(l.at)}</span>
@@ -364,7 +376,9 @@ export function CronTool() {
           </div>
         )}
 
-        <p className="panel-empty-text cron-note">三种触发目标齐备（HTTP / 本地脚本 / Agent）；日志与「定时任务看板」（B.3）同源（agent-task-log）。</p>
+        <p className="panel-empty-text cron-note">
+          四种触发目标齐备（HTTP / 本地脚本 / Agent / 纯 LLM 推理）；LLM 类任务调度触发结束后发系统通知，手动触发不打扰；需先在「AI 助手」页启动助手并配置模型。日志与「定时任务看板」（B.3）同源（agent-task-log）。
+        </p>
       </div>
     </div>
   )

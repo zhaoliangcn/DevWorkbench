@@ -12,15 +12,21 @@ vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: vi.fn(() => []) },
   dialog: { showMessageBox: vi.fn(async () => ({ response: 2 })) }, // 默认「始终允许」
   app: { getPath: vi.fn(() => TMP_DIR) },
+  // 通知完成回调（notifyTaskDone）：测试仅覆盖 fireTarget，不真正弹通知
+  Notification: class {
+    on() {}
+    show() {}
+  },
 }))
 
-// F.4c：隔离 Agent 执行（真实模块依赖 dev-assistant-ts 与 app 启动状态）
+// F.4c：隔离 Agent/LLM 执行（真实模块依赖 dev-assistant-ts 与 app 启动状态）
 vi.mock('../electron/ipc/assistant', () => ({
   runAgentTask: vi.fn(),
+  runLlmTask: vi.fn(),
 }))
 
 import { validateTasks, fireTarget, type CronTask } from '../electron/ipc/cron'
-import { runAgentTask } from '../electron/ipc/assistant'
+import { runAgentTask, runLlmTask } from '../electron/ipc/assistant'
 import { dialog } from 'electron'
 
 beforeEach(() => {
@@ -67,6 +73,11 @@ describe('validateTasks（任务清单校验）', () => {
 
   it('Agent 目标提示词不能为空（F.4c）', () => {
     expect(validateTasks([makeTask({ target: { type: 'agent', prompt: ' ' } })])).toContain('提示词')
+  })
+
+  it('LLM 目标空提示词拒绝', () => {
+    expect(validateTasks([makeTask({ target: { type: 'llm', prompt: ' ' } })])).toContain('提示词')
+    expect(validateTasks([makeTask({ target: { type: 'llm', prompt: '总结本周笔记' } })])).toBeNull()
   })
 })
 
@@ -122,5 +133,20 @@ describe('fireTarget（目标执行）', () => {
     const r = await fireTarget({ type: 'agent', prompt: '生成摘要' })
     expect(r.ok).toBe(false)
     expect(r.detail).toBe('助手未启动')
+  })
+
+  it('LLM：转发 runLlmTask 成功结果（F.4c）', async () => {
+    vi.mocked(runLlmTask).mockResolvedValueOnce({ ok: true, detail: '本周共新增 3 篇笔记' })
+    const r = await fireTarget({ type: 'llm', prompt: '总结本周笔记' })
+    expect(r.ok).toBe(true)
+    expect(r.detail).toBe('本周共新增 3 篇笔记')
+    expect(runLlmTask).toHaveBeenCalledWith('总结本周笔记')
+  })
+
+  it('LLM：失败结果透传（F.4c）', async () => {
+    vi.mocked(runLlmTask).mockResolvedValueOnce({ ok: false, detail: '助手未启动（需在 AI 助手页启动并配置模型）' })
+    const r = await fireTarget({ type: 'llm', prompt: '总结本周笔记' })
+    expect(r.ok).toBe(false)
+    expect(r.detail).toContain('助手未启动')
   })
 })

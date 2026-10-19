@@ -26,6 +26,7 @@ export interface CronTaskDef {
     | { type: 'http'; url: string; method?: string; headers?: Record<string, string>; body?: string }
     | { type: 'script'; command: string }
     | { type: 'agent'; prompt: string }
+    | { type: 'llm'; prompt: string }
   enabled: boolean
   lastRunAt?: number
 }

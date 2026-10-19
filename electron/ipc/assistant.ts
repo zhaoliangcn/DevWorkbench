@@ -605,4 +605,21 @@ export async function runAgentTask(prompt: string): Promise<{ ok: boolean; detai
   }
 }
 
+/**
+ * 附录 F F.4c：Cron 直触纯 LLM 推理 —— 单次 completion（app.llm.call，不传工具）。
+ * 不进 Agent 循环/会话（不污染上下文）、零工具零审批，适合无人值守的定时摘要/写作类任务；
+ * 与 Agent 运行可并行（call 无状态，连接池自带并发），故不占 runBusy。
+ */
+export async function runLlmTask(prompt: string): Promise<{ ok: boolean; detail: string }> {
+  if (!app) return { ok: false, detail: '助手未启动（需在 AI 助手页启动并配置模型）' }
+  try {
+    const r = await app.llm.call([{ role: 'user', content: prompt }])
+    if (r.kind === 'text') return { ok: true, detail: r.content }
+    if (r.kind === 'error') return { ok: false, detail: r.message || '模型返回错误' }
+    return { ok: false, detail: '模型返回工具调用（纯推理不携带工具，不应发生）' }
+  } catch (e) {
+    return { ok: false, detail: errMessage(e) }
+  }
+}
+
 export { registerAssistantIpc, stopAssistant }
