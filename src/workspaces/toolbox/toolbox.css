@@ -1213,28 +1213,168 @@
   color: white;
 }
 
-.tb-root .calc-input {
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 16px;
-  padding: 12px;
+.tb-root .calc-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
-.tb-root .calc-input-full {
-  width: 100%;
+/* 显示区：表达式回显 + 四进制实时结果 */
+.tb-root .calc-display {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  padding: 12px 16px;
   margin-bottom: 12px;
+  outline: none;
+  cursor: text;
 }
 
-.tb-root .operator-list {
+.tb-root .calc-expr {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 20px;
+  text-align: right;
+  min-height: 28px;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.tb-root .calc-expr-ph {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tb-root .calc-rows {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.tb-root .operator-list button {
+.tb-root .calc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .calc-row-label {
+  width: 34px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tb-root .calc-row-value {
+  word-break: break-all;
+}
+
+.tb-root .calc-row:hover .calc-row-label {
+  color: var(--accent-color);
+}
+
+.tb-root .calc-row.active {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.tb-root .calc-error {
+  color: var(--error-color);
+  font-size: 12px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  text-align: right;
+}
+
+/* 键盘网格 */
+.tb-root .calc-keypad {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.tb-root .calc-key {
+  padding: 10px 0;
+  font-size: 14px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
+  border-radius: 6px;
   color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s;
+  user-select: none;
+}
+
+.tb-root .calc-key:hover:not(:disabled) {
+  background-color: var(--border-color);
+}
+
+.tb-root .calc-key:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tb-root .calc-key.k-active:not(:disabled) {
+  background-color: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.tb-root .calc-key-op {
+  background-color: var(--bg-secondary);
+}
+
+.tb-root .calc-key-eq {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+  font-size: 16px;
+}
+
+.tb-root .calc-key-eq:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.tb-root .calc-key-span2 {
+  grid-column: span 2;
+}
+
+.tb-root .calc-key-span4 {
+  grid-column: span 4;
+}
+
+/* 历史记录 */
+.tb-root .calc-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tb-root .calc-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.tb-root .calc-history-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.tb-root .calc-history-expr {
+  word-break: break-all;
+}
+
+.tb-root .calc-history-val {
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 /* ---------- 日志查看 ---------- */
