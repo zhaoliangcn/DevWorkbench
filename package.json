@@ -104,6 +104,7 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
+      "icon": "icons/devworkbench.png",
       "target": [
         "zip",
         "dmg"

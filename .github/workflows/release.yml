@@ -1,5 +1,8 @@
-# 发布工作流：推送 v* 标签 → Windows 构建 → 自动发布 GitHub Releases
-# 产物：DevWorkbench Setup {version}.exe + .blockmap + latest.yml（支持 electron-updater 自动更新）
+# 发布工作流：推送 v* 标签 → 版本校验 + 预创建 Release → Windows exe 与 macOS dmg 并行构建 → 自动发布 GitHub Releases
+# 产物：Windows: DevWorkbench Setup {version}.exe + .blockmap + latest.yml
+#       macOS:   DevWorkbench {version}(-arm64/-x64).dmg + zip + latest-mac.yml（支持 electron-updater 自动更新）
+# 说明：macOS 无签名证书，构建跳过签名（CSC_IDENTITY_AUTO_DISCOVERY=false），
+#       用户首次打开需「右键 → 打开」绕过 Gatekeeper；签名/公证接入后删除该 env 即可
 name: Release
 
 on:
@@ -7,11 +10,36 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  release:
+  # 版本校验 + 预创建 Release：两个平台的构建任务并行消费，避免各自创建 Release 的竞态
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 校验 tag 与 package.json 版本一致
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag ($TAG) 与 package.json version ($PKG) 不一致，请先更新版本号"
+            exit 1
+          fi
+
+      - name: 预创建 Release（防止多平台构建并发上传时重复创建 Release）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" 2>/dev/null || \
+            gh release create "$GITHUB_REF_NAME" --title "DevWorkbench $GITHUB_REF_NAME" --generate-notes
+
+  release-windows:
+    needs: prepare
     runs-on: windows-latest
-    permissions:
-      contents: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -21,16 +49,6 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-
-      - name: 校验 tag 与 package.json 版本一致
-        shell: pwsh
-        run: |
-          $tag = "${env:GITHUB_REF_NAME}" -replace '^v', ''
-          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          if ($tag -ne $pkg) {
-            Write-Error "tag ($tag) 与 package.json version ($pkg) 不一致，请先更新版本号"
-            exit 1
-          }
 
       - name: 缓存 Electron / electron-builder 二进制
         uses: actions/cache@v4
@@ -49,18 +67,44 @@ jobs:
       - name: 运行测试
         run: npm test
 
-      - name: 预创建 Release（防止 electron-builder 并发上传时重复创建 Release）
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
-        run: |
-          $tag = "${env:GITHUB_REF_NAME}"
-          gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --title "DevWorkbench $tag" --generate-notes
-          }
-
-      - name: 构建并发布到 GitHub Releases
+      - name: 构建并发布到 GitHub Releases（Windows exe）
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run electron:publish
+
+  release-macos:
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: 缓存 Electron / electron-builder 二进制
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: eb-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: 运行测试
+        run: npm test
+
+      - name: 构建并发布到 GitHub Releases（macOS dmg：Apple Silicon + Intel 双架构）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 无 Apple 开发者证书：跳过签名与公证，否则 electron-builder 因找不到证书而失败
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run electron:publish -- --arm64 --x64
