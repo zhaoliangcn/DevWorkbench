@@ -13,6 +13,7 @@ vi.mock('../electron/ipc/vault.js', () => ({
 }))
 
 import { knowledgeReadNoteHandler, knowledgeSearchNotesHandler } from '../electron/ipc/knowledge-tools'
+import { notifyVaultEvent } from '../electron/ipc/knowledge-index'
 
 type HandlerFn = (args: { arguments: Record<string, unknown> }) => Promise<{
   success: boolean
@@ -160,6 +161,9 @@ describe('knowledge_search_notes（附录 E E.3.7）', () => {
       '---\ntags: [postgres]\n---\n正文没有关键词',
       'utf8',
     )
+    // 真实应用中写入由 vault watcher 增量进索引（回声也更新）；测试显式模拟该事件
+    notifyVaultEvent('tagged.md', 'change', tmpDir)
+    await new Promise((r) => setTimeout(r, 30))
     const r = await searchHandler({ arguments: { query: 'postgres' } })
     expect(r.success).toBe(true)
     expect(r.content).toContain('tagged.md')

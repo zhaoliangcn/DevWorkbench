@@ -5,6 +5,8 @@ import path from 'node:path'
 import type { ToolSpec } from '../../node_modules/dev-assistant-ts/dist/tools/spec.js'
 import type { ToolHandler } from '../../node_modules/dev-assistant-ts/dist/tools/registry.js'
 import { getVaultPath } from './vault.js'
+import { ensureVaultIndex, indexList, indexSearch } from './knowledge-index.js'
+import { scoreNoteTerms, splitTerms } from './knowledge-score.js'
 
 interface ToolResult {
   success: boolean
@@ -67,28 +69,27 @@ export const knowledgeReadNoteHandler: ToolHandler = async (args) => {
   }
 }
 
-/** 注册知识库工具（缺省 knowledge_read_note + knowledge_search_notes） */
+/** 注册知识库工具（缺省 knowledge_read_note + knowledge_search_notes + knowledge_list_notes） */
 export function registerKnowledgeTools(tools: { register: (spec: ToolSpec, handler: ToolHandler) => void }): void {
   tools.register(KNOWLEDGE_READ_NOTE_SPEC, knowledgeReadNoteHandler)
   tools.register(KNOWLEDGE_SEARCH_NOTES_SPEC, knowledgeSearchNotesHandler)
+  tools.register(KNOWLEDGE_LIST_NOTES_SPEC, knowledgeListNotesHandler)
 }
 
 /* ---------- knowledge_search_notes（附录 E E.3.7）：检索 → 细读链路的检索端 ---------- */
 
-/** 命中片段上下文字符数（与渲染层 utils/search.ts 的 SNIPPET_CONTEXT 一致） */
-const SNIPPET_CONTEXT = 40
 /** 单次返回条数上限 */
 const SEARCH_MAX_LIMIT = 20
 
 export const KNOWLEDGE_SEARCH_NOTES_SPEC: ToolSpec = {
   name: 'knowledge_search_notes',
   description:
-    '按关键词检索知识库笔记全文（标题命中×3、标签×2、正文×1 加权排序），返回路径、得分与正文片段。' +
-    '结果中的 path 可直接传给 knowledge_read_note 细读。',
+    '按关键词检索知识库笔记（支持空格分隔多关键词，标题命中×3、标签/别名×2、正文×1 加权排序），' +
+    '返回路径、得分与正文片段。结果中的 path 可直接传给 knowledge_read_note 细读。',
   parameters: {
     type: 'object',
     properties: {
-      query: { type: 'string', description: '关键词' },
+      query: { type: 'string', description: '关键词，可空格分隔多个' },
       limit: { type: 'number', description: `可选，最多返回条数（1-${SEARCH_MAX_LIMIT}），默认 8` },
     },
     required: ['query'],
@@ -100,33 +101,6 @@ interface SearchHitLite {
   relPath: string
   score: number
   snippet: string | null
-}
-
-/** 打分规则与渲染层 rankSearch 对齐：标题 includes×3 / 标签 some×2 / 正文 includes×1 */
-function scoreNote(title: string, content: string, q: string): { score: number; snippet: string | null } {
-  const ql = q.toLowerCase()
-  let score = 0
-  if (title.toLowerCase().includes(ql)) score += 3
-
-  // 标签：行内 #tag + frontmatter 单行数组 tags: [a, b]（渲染层有完整解析器，此处取语义子集）
-  const tags = [...content.matchAll(/#([\w\u4e00-\u9fff-]+)/g)].map((m) => m[1].toLowerCase())
-  const fmTagLine = content.match(/^tags:\s*\[(.+)\]\s*$/m)
-  if (fmTagLine) {
-    for (const raw of fmTagLine[1].split(',')) {
-      tags.push(raw.trim().replace(/^["']|["']$/g, '').replace(/^#/, '').toLowerCase())
-    }
-  }
-  if (tags.some((t) => t.includes(ql))) score += 2
-
-  const lower = content.toLowerCase()
-  if (lower.includes(ql)) score += 1
-
-  const idx = lower.indexOf(ql)
-  const snippet =
-    idx === -1
-      ? null
-      : content.slice(Math.max(0, idx - SNIPPET_CONTEXT), idx + q.length + SNIPPET_CONTEXT).replace(/\s+/g, ' ').trim()
-  return { score, snippet }
 }
 
 /** 遍历 vault 收集 .md（跳过 trash/attachments，与 file:list 同规则） */
@@ -168,15 +142,23 @@ export const knowledgeSearchNotesHandler: ToolHandler = async (args) => {
     Math.max(1, Math.floor(Number((args.arguments as { limit?: unknown }).limit ?? 8)) || 8),
   )
 
-  const files: { relPath: string; title: string; content: string }[] = []
-  collectMdFiles(vault, '', files)
-
-  const hits: SearchHitLite[] = []
-  for (const f of files) {
-    const { score, snippet } = scoreNote(f.title, f.content, query)
-    if (score > 0) hits.push({ relPath: f.relPath, score, snippet })
+  // 首选内存索引（零磁盘 IO）；索引初始化失败时降级为直接扫盘
+  let hits: SearchHitLite[]
+  try {
+    await ensureVaultIndex(vault)
+    hits = indexSearch(query)
+  } catch {
+    const files: { relPath: string; title: string; content: string }[] = []
+    collectMdFiles(vault, '', files)
+    const terms = splitTerms(query)
+    hits = []
+    for (const f of files) {
+      const { score, snippet } = scoreNoteTerms(f.title, f.content, terms)
+      if (score > 0) hits.push({ relPath: f.relPath, score, snippet })
+    }
+    hits.sort((a, b) => b.score - a.score)
+    hits = hits.slice(0, limit)
   }
-  hits.sort((a, b) => b.score - a.score)
 
   if (hits.length === 0) {
     return result(true, `未找到与「${query}」相关的笔记`)
@@ -188,4 +170,47 @@ export const knowledgeSearchNotesHandler: ToolHandler = async (args) => {
   )
   const note = hits.length > shown.length ? `（共 ${hits.length} 篇命中，仅列前 ${shown.length} 条）` : `（共 ${hits.length} 篇命中）`
   return result(true, `搜索「${query}」${note}，path 可直接传给 knowledge_read_note 细读：\n${lines.join('\n')}`)
+}
+
+/* ---------- knowledge_list_notes：全局清单，让 Agent 先拿地图再定向细读 ---------- */
+
+/** 单次返回条数上限 */
+const LIST_MAX_LIMIT = 300
+
+export const KNOWLEDGE_LIST_NOTES_SPEC: ToolSpec = {
+  name: 'knowledge_list_notes',
+  description:
+    '列出知识库全部笔记路径（按字典序，附每篇的标签摘要），用于在检索前建立知识库全局视图。' +
+    '结果中的 path 可直接传给 knowledge_read_note 细读。',
+  parameters: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: `可选，最多返回条数（1-${LIST_MAX_LIMIT}），默认 200` },
+    },
+    required: [],
+  },
+  dangerLevel: 'low',
+}
+
+export const knowledgeListNotesHandler: ToolHandler = async (args) => {
+  const vault = getVaultPath()
+  if (!vault) return result(false, '尚未选择知识库文件夹')
+
+  const limit = Math.min(
+    LIST_MAX_LIMIT,
+    Math.max(1, Math.floor(Number((args.arguments as { limit?: unknown }).limit ?? 200)) || 200),
+  )
+
+  try {
+    await ensureVaultIndex(vault)
+  } catch (e) {
+    return result(false, `知识库索引初始化失败: ${errMessage(e)}`)
+  }
+
+  const { lines, total } = indexList(limit)
+  if (total === 0) {
+    return result(true, '知识库为空（或全部笔记位于 trash/attachments，已被排除）')
+  }
+  const note = total > lines.length ? `（共 ${total} 篇，仅列前 ${lines.length} 条，可用 limit 调大）` : `（共 ${total} 篇）`
+  return result(true, `知识库笔记清单${note}，path 可直接传给 knowledge_read_note 细读：\n${lines.join('\n')}`)
 }

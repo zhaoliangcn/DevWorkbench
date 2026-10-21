@@ -26,5 +26,5 @@ export function buildPinnedContext(notes: PinnedNoteLite[], text: string): strin
       return line
     })
     .join('\n')
-  return `【知识库钉选上下文】\n${lines}\n（如需笔记全文，请调用 knowledge_read_note 工具按上述路径读取；如需检索更多笔记，可调用 knowledge_search_notes）\n\n【用户问题】\n${text}`
+  return `【知识库钉选上下文】\n${lines}\n（如需笔记全文，请调用 knowledge_read_note 工具按上述路径读取；如需建立知识库全局视图可调用 knowledge_list_notes，检索更多笔记可调用 knowledge_search_notes）\n\n【用户问题】\n${text}`
 }

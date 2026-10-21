@@ -29,7 +29,11 @@ describe('findOutsidePath（工具参数拦截）', () => {
   it('每个文件工具的路径参数都被校验', () => {
     for (const tool of Object.keys(PATH_ARG_TOOLS)) {
       const { key, list } = PATH_ARG_TOOLS[tool]
-      const outside = 'C:' + sep + 'Users' + sep + 'x' + sep + 'evil.md'
+      // win32 的 'C:\...' 在 posix 不是绝对路径（会被当相对路径解析进域内），按平台构造真实越界绝对路径
+      const outside =
+        process.platform === 'win32'
+          ? 'C:' + sep + 'Users' + sep + 'x' + sep + 'evil.md'
+          : path.resolve('/etc', 'evil.md')
       const args = list ? { [key]: [outside] } : { [key]: outside }
       expect(findOutsidePath(tool, args, WORK)).toBe(outside)
     }

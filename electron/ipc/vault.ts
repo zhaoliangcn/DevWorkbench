@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import chokidar from 'chokidar'
 import type { FSWatcher } from 'chokidar'
 import { setVaultPath } from '../api-server.js'
+import { notifyVaultEvent } from './knowledge-index.js'
 
 let vaultPath: string | null = null
 
@@ -43,6 +44,8 @@ function relayChange(full: string, kind: 'add' | 'change' | 'unlink') {
   const relPath = path.relative(vaultPath, full).split(path.sep).join('/')
   // trash/ 是自己的回收站、attachments/ 二进制附件由 dataURL 缓存管理，都不推
   if (relPath.startsWith('trash/') || relPath.startsWith('attachments/')) return
+  // 知识库内存索引增量维护：自己的写入（回声）同样改变内容，必须在回声过滤之前调用
+  notifyVaultEvent(relPath, kind, vaultPath)
   if (kind !== 'unlink' && isOwnEcho(relPath)) return
   if (kind === 'unlink') recentWrites.delete(relPath)
   broadcastChanged(relPath, kind)
