@@ -1,5 +1,5 @@
 // 附录 F F.4b：Cron 触发调度器 —— 主进程定时器轮询（15s 对齐分钟），
-// 命中即触发 HTTP 请求（复用 http:request handler）或本地脚本（exec，30s 超时）。
+// 命中即触发 HTTP 请求（复用 http:request handler）或本地脚本（exec，默认 30s 超时，可按任务自定义 1s–30min）。
 // 任务持久化 data 键 'cron-tasks'；触发日志写 'agent-task-log'（与 B.3 定时任务看板同源），
 // 并经 'cron:log' 实时推送 renderer。Agent 任务触发留待 F.4c。
 import { ipcMain, BrowserWindow, dialog, Notification } from 'electron'
@@ -22,6 +22,8 @@ export interface CronTargetHttp {
 export interface CronTargetScript {
   type: 'script'
   command: string
+  /** 自定义超时（毫秒）；缺省用 SCRIPT_TIMEOUT_MS（30s），合法范围 1s–30min */
+  timeoutMs?: number
 }
 
 export interface CronTargetAgent {
@@ -58,6 +60,8 @@ export interface CronLogEntry {
 
 const CRON_LOG_MAX = 200
 const SCRIPT_TIMEOUT_MS = 30_000
+const SCRIPT_TIMEOUT_MIN_MS = 1_000
+const SCRIPT_TIMEOUT_MAX_MS = 30 * 60_000
 const HTTP_TIMEOUT_MS = 30_000
 const TICK_MS = 15_000
 const TASKS_KEY = 'cron-tasks'
@@ -79,6 +83,12 @@ export function validateTasks(tasks: CronTask[]): string | null {
     } else if (t.target.type === 'script') {
       if (!t.target.command?.trim()) return `任务「${t.name}」：脚本命令不能为空`
       if (t.target.command.length > 2000) return `任务「${t.name}」：脚本命令过长（≤2000 字符）`
+      if (t.target.timeoutMs !== undefined) {
+        const ms = t.target.timeoutMs
+        if (!Number.isFinite(ms) || !Number.isInteger(ms) || ms < SCRIPT_TIMEOUT_MIN_MS || ms > SCRIPT_TIMEOUT_MAX_MS) {
+          return `任务「${t.name}」：脚本超时需为 1–${SCRIPT_TIMEOUT_MAX_MS / 1000} 秒的整数`
+        }
+      }
     } else if (t.target.type === 'agent') {
       if (!t.target.prompt?.trim()) return `任务「${t.name}」：Agent 任务提示词不能为空`
     } else if (t.target.type === 'llm') {
@@ -166,7 +176,7 @@ export async function fireTarget(target: CronTarget): Promise<{ ok: boolean; det
   return new Promise((resolve) => {
     exec(
       target.command,
-      { timeout: SCRIPT_TIMEOUT_MS, windowsHide: true, encoding: 'utf8', maxBuffer: 1024 * 1024 },
+      { timeout: target.timeoutMs ?? SCRIPT_TIMEOUT_MS, windowsHide: true, encoding: 'utf8', maxBuffer: 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {
           const reason = stderr?.trim() || err.message

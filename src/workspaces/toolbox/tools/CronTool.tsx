@@ -55,7 +55,7 @@ function targetSummary(t: CronTaskDef['target']): string {
   if (t.type === 'http') return `${t.method ?? 'GET'} ${t.url}`
   if (t.type === 'agent') return `Agent：${t.prompt}`
   if (t.type === 'llm') return `LLM：${t.prompt}`
-  return t.command
+  return t.timeoutMs ? `${t.command}（超时 ${Math.round(t.timeoutMs / 1000)}s）` : t.command
 }
 
 /** 目标类型标签（任务列表与日志共用） */
@@ -78,6 +78,7 @@ export function CronTool() {
   const [method, setMethod] = useState('GET')
   const [body, setBody] = useState('')
   const [command, setCommand] = useState('')
+  const [timeoutSec, setTimeoutSec] = useState('30')
   const [prompt, setPrompt] = useState('')
 
   useEffect(() => {
@@ -161,7 +162,14 @@ export function CronTool() {
       target = { type: 'http', url: url.trim(), method, body: body || undefined }
     } else if (targetType === 'script') {
       if (!command.trim()) return setFormError('请填写本地脚本命令')
-      target = { type: 'script', command: command.trim() }
+      let timeoutMs: number | undefined
+      const secRaw = timeoutSec.trim()
+      if (secRaw) {
+        const sec = Number(secRaw)
+        if (!Number.isInteger(sec) || sec < 1 || sec > 1800) return setFormError('脚本超时需为 1–1800 秒的整数')
+        timeoutMs = sec * 1000
+      }
+      target = { type: 'script', command: command.trim(), timeoutMs }
     } else if (targetType === 'agent') {
       if (!prompt.trim()) return setFormError('请填写 Agent 任务提示词')
       target = { type: 'agent', prompt: prompt.trim() }
@@ -175,6 +183,7 @@ export function CronTool() {
     setUrl('')
     setBody('')
     setCommand('')
+    setTimeoutSec('30')
     setPrompt('')
     setSavedKey('')
   }
@@ -323,16 +332,28 @@ export function CronTool() {
               </div>
             </>
           ) : targetType === 'script' ? (
-            <div className="cron-add-row">
-              <textarea
-                className="cron-command-input"
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                rows={2}
-                placeholder="shell 命令，如：/usr/local/bin/backup.sh（执行需确认，30s 超时）"
-                spellCheck={false}
-              />
-            </div>
+            <>
+              <div className="cron-add-row">
+                <textarea
+                  className="cron-command-input"
+                  value={command}
+                  onChange={(e) => setCommand(e.target.value)}
+                  rows={2}
+                  placeholder="shell 命令，如：/usr/local/bin/backup.sh（执行需确认，默认 30s 超时，可自定义）"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="cron-add-row">
+                <input
+                  className="cron-timeout-input"
+                  value={timeoutSec}
+                  onChange={(e) => setTimeoutSec(e.target.value)}
+                  placeholder="30"
+                  spellCheck={false}
+                />
+                <span className="cron-timeout-hint">脚本超时（秒，1–1800，留空默认 30）</span>
+              </div>
+            </>
           ) : (
             <div className="cron-add-row">
               <textarea

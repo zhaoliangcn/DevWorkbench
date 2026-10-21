@@ -71,6 +71,13 @@ describe('validateTasks（任务清单校验）', () => {
     expect(validateTasks([makeTask({ target: { type: 'script', command: '  ' } })])).toContain('命令')
   })
 
+  it('脚本自定义超时：合法值通过，越界值拒绝', () => {
+    expect(validateTasks([makeTask({ target: { type: 'script', command: 'x', timeoutMs: 600_000 } })])).toBeNull()
+    expect(validateTasks([makeTask({ target: { type: 'script', command: 'x', timeoutMs: 500 } })])).toContain('超时')
+    expect(validateTasks([makeTask({ target: { type: 'script', command: 'x', timeoutMs: 1_800_001 } })])).toContain('超时')
+    expect(validateTasks([makeTask({ target: { type: 'script', command: 'x', timeoutMs: 1.5 } })])).toContain('超时')
+  })
+
   it('Agent 目标提示词不能为空（F.4c）', () => {
     expect(validateTasks([makeTask({ target: { type: 'agent', prompt: ' ' } })])).toContain('提示词')
   })
@@ -118,6 +125,17 @@ describe('fireTarget（目标执行）', () => {
     const r = await fireTarget({ type: 'script', command: 'exit 3' })
     expect(r.ok).toBe(false)
     expect(r.detail).toContain('exit=3')
+  })
+
+  it('脚本：自定义 timeoutMs 生效，超时命令被终止', async () => {
+    const r = await fireTarget({ type: 'script', command: 'node -e "setTimeout(()=>{},60000)"', timeoutMs: 1000 })
+    expect(r.ok).toBe(false)
+  }, 10_000)
+
+  it('脚本：自定义 timeoutMs 下快速命令正常完成', async () => {
+    const r = await fireTarget({ type: 'script', command: 'echo fast-cron', timeoutMs: 60_000 })
+    expect(r.ok).toBe(true)
+    expect(r.detail).toContain('fast-cron')
   })
 
   it('Agent：转发 runAgentTask 成功结果（F.4c）', async () => {

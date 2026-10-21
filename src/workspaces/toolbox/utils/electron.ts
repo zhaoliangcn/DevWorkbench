@@ -24,7 +24,7 @@ export interface CronTaskDef {
   expr: string
   target:
     | { type: 'http'; url: string; method?: string; headers?: Record<string, string>; body?: string }
-    | { type: 'script'; command: string }
+    | { type: 'script'; command: string; timeoutMs?: number }
     | { type: 'agent'; prompt: string }
     | { type: 'llm'; prompt: string }
   enabled: boolean
