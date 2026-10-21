@@ -10,7 +10,7 @@ import { persist } from 'zustand/middleware'
 
 export interface AssistantChatMessage {
   id: number
-  role: 'user' | 'assistant' | 'tool' | 'status' | 'error'
+  role: 'user' | 'assistant' | 'tool' | 'status' | 'error' | 'reasoning'
   content: string
   /** 工具名（role=tool） */
   toolName?: string
@@ -84,6 +84,8 @@ interface AssistantState {
   messages: AssistantChatMessage[]
   pushMessage: (m: Omit<AssistantChatMessage, 'id'>) => void
   appendToLast: (content: string) => void
+  /** 追加思考流增量（reasoningDelta）：沿用 appendToLast 的「尾块续写」模式 */
+  appendReasoning: (content: string) => void
   clearMessages: () => void
 
   // 持久化
@@ -179,6 +181,16 @@ export const useAssistantStore = create<AssistantState>()(
           last.content += content
         } else {
           messages.push({ id: msgSeq++, role: 'assistant', content })
+        }
+        set({ messages })
+      },
+      appendReasoning: (content) => {
+        const messages = [...get().messages]
+        const last = messages[messages.length - 1]
+        if (last && last.role === 'reasoning') {
+          last.content += content
+        } else {
+          messages.push({ id: msgSeq++, role: 'reasoning', content })
         }
         set({ messages })
       },

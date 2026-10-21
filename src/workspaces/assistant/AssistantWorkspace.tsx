@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock, PanelLeft, MessageSquarePlus } from 'lucide-react'
+import { Bot, Send, Square, Loader2, Wrench, Check, X, Pin, ShieldAlert, ShieldCheck, History, Sparkles, Trash2, Pencil, CalendarClock, PanelLeft, MessageSquarePlus, Brain } from 'lucide-react'
 import { useAssistantStore } from '../../store/assistantStore'
 import { useCrossStore } from '../../store/crossStore'
 import { useStore as useKnowledgeStore } from '../../store/knowledgeStore'
@@ -43,6 +43,7 @@ export function AssistantWorkspace() {
   const messages = useAssistantStore((s) => s.messages)
   const pushMessage = useAssistantStore((s) => s.pushMessage)
   const appendToLast = useAssistantStore((s) => s.appendToLast)
+  const appendReasoning = useAssistantStore((s) => s.appendReasoning)
   const clearMessages = useAssistantStore((s) => s.clearMessages)
   const approvalEnabled = useAssistantStore((s) => s.approvalEnabled)
   const setApprovalEnabled = useAssistantStore((s) => s.setApprovalEnabled)
@@ -169,7 +170,8 @@ export function AssistantWorkspace() {
           if (e.id) pushMessage({ role: 'status', content: '审批请求超时，已默认拒绝' })
           break
         case 'reasoningDelta':
-          // 思考流不展开，忽略（避免噪声）
+          // 思考流实时显示（修 1）：思考型模型的长思考不再表现为无响应
+          appendReasoning(e.content ?? '')
           break
         default:
           break
@@ -627,6 +629,16 @@ export function AssistantWorkspace() {
                   {m.content}
                   {running && <span className="assistant-caret" />}
                 </div>
+              </div>
+            )
+          }
+          if (m.role === 'reasoning') {
+            return (
+              <div key={m.id} className="assistant-msg reasoning">
+                <span className="assistant-msg-role">
+                  <Brain size={12} /> 思考
+                </span>
+                <div className="assistant-msg-content reasoning-content">{m.content}</div>
               </div>
             )
           }

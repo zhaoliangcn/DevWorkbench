@@ -168,6 +168,25 @@
   padding: 0 4px;
 }
 
+/* 思考流（修 1）：弱化展示，实时可见但不喧宾夺主 */
+.assistant-msg.reasoning {
+  align-self: flex-start;
+}
+
+.assistant-msg.reasoning .assistant-msg-role {
+  color: var(--color-text-muted);
+}
+
+.assistant-msg.reasoning .reasoning-content {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 .assistant-caret {
   display: inline-block;
   width: 6px;

@@ -250,6 +250,62 @@ function errMessage(e: unknown): string {
 }
 
 /**
+ * LLM 调用可见化（修 2）：包装 provider 层 chat/chatStream 与 client 层 callStream，
+ * 把静默重试/故障转移/首响应耗时广播成 status 事件。
+ * 背景：429/5xx 指数退避（2s→…→最长 120s）与 provider 间转移只进 pino stdout，
+ * 渲染端表现为「发送后长时间无响应」却无从得知原因。
+ * providers 为 LlmClient 私有字段，运行时经类型断言访问；每次 replaceLlm 换新
+ * client 后需重新安装。
+ */
+function installLlmVisibility(instance: App) {
+  const client = instance.llm as unknown as {
+    providers: Array<{
+      name: string
+      chat: (...args: unknown[]) => Promise<unknown>
+      /** async generator：调用返回生成器，错误在迭代期抛出 */
+      chatStream: (...args: unknown[]) => AsyncGenerator<unknown>
+    }>
+    activeConfig: () => { name: string } | undefined
+    callStream: (...args: unknown[]) => Promise<AsyncGenerator<unknown>>
+  }
+  // provider 层：每次尝试（含重试）失败均可见。流式错误在生成器迭代期抛出，
+  // 必须包生成器本体（yield* 再抛出），不能只包调用返回值
+  for (const p of client.providers ?? []) {
+    const origChat = p.chat.bind(p)
+    p.chat = async (...args) => {
+      try {
+        return await origChat(...args)
+      } catch (e) {
+        broadcast({ kind: 'status', content: `⚠ LLM 调用失败（${p.name}）：${errMessage(e)} —— 将自动重试/故障转移` })
+        throw e
+      }
+    }
+    const origStream = p.chatStream.bind(p)
+    p.chatStream = (...args) => {
+      const gen = origStream(...args)
+      return (async function* () {
+        try {
+          yield* gen
+        } catch (e) {
+          broadcast({ kind: 'status', content: `⚠ LLM 流式调用失败（${p.name}）：${errMessage(e)} —— 将自动重试/故障转移` })
+          throw e
+        }
+      })()
+    }
+  }
+  // client 层：首响应耗时（TTFB 含重试/转移等待），区分「连接慢」与「生成慢」；
+  // callStream 在产出首个事件后才 resolve，此时读 activeConfig 已是故障转移后的生效 provider
+  const origCallStream = client.callStream.bind(client)
+  client.callStream = async (...args) => {
+    const t0 = Date.now()
+    const gen = await origCallStream(...args)
+    const name = client.activeConfig()?.name ?? '?'
+    broadcast({ kind: 'status', content: `LLM 已响应（${name}，首响应 ${((Date.now() - t0) / 1000).toFixed(1)}s）` })
+    return gen
+  }
+}
+
+/**
  * 工作目录解析：显式设置优先（须存在且为目录），否则跟随知识库 Vault。
  * 会话存储（.dev-assistant-store）与 Agent 的文件操作均以此目录为根。
  */
@@ -318,6 +374,8 @@ async function launchApp(options: AssistantStartInput, resumeFile?: string): Pro
   })
   // 包装顺序：路径守卫最内层（先包原实现），其后技能过滤器、审批包装依次叠加
   installPathGuard(next.tools, working.dir)
+  // LLM 调用可见化（修 2）：重试/故障转移/首响应耗时广播到渲染端
+  installLlmVisibility(next)
   // 工具箱纯函数工具注入（缺省全部 toolbox_*）；先装技能过滤器再装审批包装
   installToolFilter(next.tools)
   registerToolboxTools(next.tools, options.extraToolNames ?? [...TOOLBOX_TOOL_NAMES])
@@ -444,6 +502,8 @@ function registerAssistantIpc() {
     if (!app) return { success: false, error: '助手未启动' }
     try {
       await app.replaceLlm(models)
+      // replaceLlm 换了新 LlmClient，重新安装调用可见化包装
+      installLlmVisibility(app)
       return { success: true }
     } catch (e) {
       return { success: false, error: errMessage(e) }
