@@ -102,6 +102,7 @@ export function AssistantWorkspace() {
         if (!st.running && active && (active.apiKey.length > 0 || active.provider === 'ollama')) {
           const res = await assistantAPI.start({
             models,
+            activeModel: active.name,
             schedulerEnabled: true,
             approvalEnabled: useAssistantStore.getState().approvalEnabled,
             policy: useAssistantStore.getState().policy,

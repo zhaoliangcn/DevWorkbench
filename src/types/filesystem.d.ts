@@ -494,6 +494,8 @@ interface ElectronAPI {
   assistant: {
     start: (options: {
       models: AssistantModelConfig[]
+      /** 活跃模型名（渲染端选择器）；缺省用 models 首个 */
+      activeModel?: string
       schedulerEnabled?: boolean
       approvalEnabled?: boolean
       /** 工作目录（缺省跟随知识库 Vault）；会话/任务存于该目录下 */

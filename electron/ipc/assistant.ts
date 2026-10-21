@@ -67,6 +67,8 @@ export interface AssistantStatus {
 
 export interface AssistantStartInput {
   models: AssistantModelInput[]
+  /** 活跃模型名（渲染端选择器）；缺省用 models 首个 */
+  activeModel?: string
   schedulerEnabled?: boolean
   approvalEnabled?: boolean
   /** 工作目录（缺省跟随知识库 Vault）；会话/任务存于该目录下 */
@@ -372,6 +374,10 @@ async function launchApp(options: AssistantStartInput, resumeFile?: string): Pro
     // 不经审批管线（上游 P0）：嵌入场景一律关闭，技能/定时任务走宿主自有机制
     hooksEnabled: false,
   })
+  // 活跃模型（修 3）：LlmClient 构造默认 activeIdx=0（永远先打 models 首个配置），
+  // 渲染端选择的活跃模型此前从未传入 —— 显式指定后首轮调用直达目标 provider，
+  // 不再对未启用的配置（如 ollama）白耗重试+转移等待
+  if (options.activeModel) next.llm.setActiveByName(options.activeModel)
   // 包装顺序：路径守卫最内层（先包原实现），其后技能过滤器、审批包装依次叠加
   installPathGuard(next.tools, working.dir)
   // LLM 调用可见化（修 2）：重试/故障转移/首响应耗时广播到渲染端

@@ -69,6 +69,7 @@ export function SettingsWorkspace() {
       useAssistantStore.getState().setPolicy(policy)
       const res = await assistantAPI.start({
         models: finalModels,
+        activeModel: active.name,
         schedulerEnabled: true,
         approvalEnabled: useAssistantStore.getState().approvalEnabled,
         policy,
@@ -206,7 +207,13 @@ export function SettingsWorkspace() {
                 />
                 <button
                   className="assistant-active-toggle"
-                  onClick={() => useAssistantStore.getState().setActiveModel(m.name)}
+                  onClick={() => {
+                    useAssistantStore.getState().setActiveModel(m.name)
+                    // 运行中热切换活跃 provider（修 3）：否则仅更新 store，重启前不生效
+                    if (useAssistantStore.getState().status?.running) {
+                      void assistantAPI.switchModel(m.name)
+                    }
+                  }}
                   title="设为活跃模型"
                 >
                   {activeModel === m.name ? '✓ 活跃' : '设为活跃'}
