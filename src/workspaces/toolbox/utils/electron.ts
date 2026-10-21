@@ -191,6 +191,8 @@ export interface ElectronAPIAdapter {
     filterName?: string,
     extensions?: string[],
   ) => Promise<{ success: boolean; canceled: boolean; content: string; path?: string; error?: string }>
+  /** 复制文本到系统剪贴板：Electron 走主进程 clipboard，Web 环境走 navigator.clipboard + execCommand 降级 */
+  copyText: (text: string) => Promise<boolean>
 
   /** SMB 共享管理（smb:* 命名空间） */
   smbCheck: () => Promise<{ available: boolean; platform: string; isAdmin?: boolean; error?: string }>
@@ -334,6 +336,27 @@ const mockAPI: ElectronAPIAdapter = {
   openTextFile: () =>
     Promise.resolve({ success: false, canceled: false, content: '', error: 'Web 环境不支持文件导入' }),
 
+  copyText: async (text) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+        return true
+      }
+      // 无 clipboard API 时的降级：隐藏 textarea + execCommand
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  },
+
   smbCheck: () => Promise.resolve({ available: false, platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbList: () => Promise.resolve({ success: false, raw: '', platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbCreate: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SMB 管理' }),
@@ -415,6 +438,11 @@ function createElectronAPI(): ElectronAPIAdapter {
     saveTextAs: (fileName, content, filterName, extension) =>
       bridge.file.saveTextAs(fileName, content, filterName, extension),
     openTextFile: (filterName, extensions) => bridge.file.openTextFile(filterName, extensions),
+
+    copyText: async (text) => {
+      const r = await bridge.file.copyText(text)
+      return r.success
+    },
 
     smbCheck: () => bridge.smb.check(),
     smbList: () => bridge.smb.list(),

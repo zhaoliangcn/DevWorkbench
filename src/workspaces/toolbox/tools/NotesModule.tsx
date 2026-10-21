@@ -36,6 +36,8 @@ export function NotesModule() {
   })
   // 解锁状态仅存本会话内存（密码+明文），重启应用即失效
   const [unlocked, setUnlocked] = useState<Record<string, SessionUnlock>>({})
+  // 最近复制成功的笔记 id（按钮短暂显示 ✅ 反馈）
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null)
   const [importStrategy, setImportStrategy] = useState<MergeStrategy>('skip')
@@ -214,13 +216,20 @@ export function NotesModule() {
     })
   }
 
-  const copyNote = (note: Note) => {
+  const copyNote = async (note: Note) => {
     const text = note.encrypted ? unlocked[note.id]?.plain : note.content
     if (!text) {
       alert('请先解锁后再复制')
       return
     }
-    navigator.clipboard.writeText(text)
+    // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+    const ok = await electronAPI.copyText(text)
+    if (!ok) {
+      alert('复制失败，请手动复制')
+      return
+    }
+    setCopiedId(note.id)
+    window.setTimeout(() => setCopiedId((cur) => (cur === note.id ? null : cur)), 1200)
   }
 
   const formatTime = (timestamp: number) => {
@@ -485,8 +494,8 @@ export function NotesModule() {
                   <button onClick={() => togglePin(note.id)} className="btn-icon" title={note.pinned ? '取消置顶' : '置顶'}>
                     {note.pinned ? '📌' : '📍'}
                   </button>
-                  <button onClick={() => copyNote(note)} className="btn-icon" title="复制">
-                    📋
+                  <button onClick={() => copyNote(note)} className="btn-icon" title={copiedId === note.id ? '已复制' : '复制'}>
+                    {copiedId === note.id ? '✅' : '📋'}
                   </button>
                   <button onClick={() => openEditForm(note)} className="btn-icon" title="编辑">
                     ✏️

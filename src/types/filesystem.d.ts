@@ -126,6 +126,8 @@ interface ElectronAPI {
       filterName?: string,
       extensions?: string[],
     ) => Promise<{ success: boolean; canceled: boolean; content: string; path?: string; error?: string }>
+    /** 复制文本到系统剪贴板（主进程 clipboard，规避渲染层 navigator.clipboard 的权限/焦点限制） */
+    copyText: (text: string) => Promise<{ success: boolean; error?: string }>
   }
   dir: {
     list: () => Promise<string[]>

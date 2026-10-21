@@ -36,6 +36,8 @@ const api = {
     export: (relativePath: string, content: string) => ipcRenderer.invoke('file:export', relativePath, content),
     saveTextAs: (fileName: string, content: string, filterName?: string, extension?: string) =>
       ipcRenderer.invoke('file:saveTextAs', fileName, content, filterName, extension),
+    copyText: (text: string) =>
+      ipcRenderer.invoke('file:copyText', text) as Promise<{ success: boolean; error?: string }>,
     openTextFile: (filterName?: string, extensions?: string[]) =>
       ipcRenderer.invoke('file:openTextFile', filterName, extensions),
   },

@@ -1,4 +1,4 @@
-import { dialog, ipcMain, BrowserWindow } from 'electron'
+import { clipboard, dialog, ipcMain, BrowserWindow } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { resolveSafe, markWrite } from './vault.js'
@@ -171,6 +171,18 @@ export function registerFileIpc() {
       }
     },
   )
+
+  // 复制文本到系统剪贴板：渲染层 navigator.clipboard 在部分场景
+  // （file:// 加载、窗口失焦）会被浏览器静默拒绝，主进程 clipboard 无此限制
+  ipcMain.handle('file:copyText', (_event, text: string) => {
+    if (typeof text !== 'string') return { success: false, error: '参数必须为字符串' }
+    try {
+      clipboard.writeText(text)
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: (e as Error).message }
+    }
+  })
 
   // 打开并读取：单次 IPC 完成对话框选择+读取，渲染进程无法指定任意路径
   ipcMain.handle('file:openTextFile', async (_event, filterName?: string, extensions?: string[]) => {
