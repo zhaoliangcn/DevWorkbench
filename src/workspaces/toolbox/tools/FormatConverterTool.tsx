@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { electronAPI } from '../utils/electron'
 
 type Format = 'json' | 'yaml' | 'toml'
 
@@ -125,8 +126,10 @@ export function FormatConverterTool() {
     }
   }
 
-  const copyOutput = () => {
-    navigator.clipboard.writeText(output)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copyOutput = async () => {
+    const ok = await electronAPI.copyText(output)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   const formatInput = () => {

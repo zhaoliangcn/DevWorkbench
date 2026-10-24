@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { electronAPI } from '../utils/electron'
 import { timestampTransform, formatInTimezone } from './pure/timestamp'
 
 const timezones = [
@@ -50,8 +51,10 @@ export function TimestampTool() {
     setDateDiff(`${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒\n总计秒数: ${Math.floor(diff / 1000)}`)
   }
 
-  const copyResult = () => {
-    navigator.clipboard.writeText(result)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copyResult = async () => {
+    const ok = await electronAPI.copyText(result)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   return (

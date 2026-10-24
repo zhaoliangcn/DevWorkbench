@@ -66,7 +66,8 @@ export function EnvManagerTool() {
 
   const copySnippet = async () => {
     if (!snippet) return
-    await navigator.clipboard.writeText(snippet.text)
+    const ok = await electronAPI.copyText(snippet.text)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   return (

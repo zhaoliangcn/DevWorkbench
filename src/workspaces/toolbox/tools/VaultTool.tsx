@@ -193,7 +193,10 @@ export function VaultTool() {
 
   const copyValue = async (id: string) => {
     const r = await electronAPI.vaultGet(masterPw, id)
-    if (r.success) await navigator.clipboard.writeText(r.value)
+    if (r.success) {
+      const ok = await electronAPI.copyText(r.value)
+      if (!ok) alert('复制失败，请手动复制')
+    }
   }
 
   const removeEntry = async (id: string) => {

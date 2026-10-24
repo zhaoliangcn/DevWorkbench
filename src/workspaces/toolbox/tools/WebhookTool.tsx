@@ -49,6 +49,13 @@ export function WebhookTool() {
     setEvents([])
   }
 
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copyTestUrl = async () => {
+    if (!port) return
+    const ok = await electronAPI.copyText(`http://127.0.0.1:${port}/webhook/test`)
+    if (!ok) alert('复制失败，请手动复制')
+  }
+
   const saveAsNote = (ev: WebhookEvent) => {
     const time = new Date(ev.receivedAt).toLocaleString()
     const title = `Webhook ${ev.method} ${ev.path.split('?')[0]}`
@@ -92,7 +99,7 @@ export function WebhookTool() {
               监听中：http://127.0.0.1:{port}/webhook/&lt;name&gt;
               <button
                 className="btn-secondary"
-                onClick={() => port && navigator.clipboard.writeText(`http://127.0.0.1:${port}/webhook/test`)}
+                onClick={() => void copyTestUrl()}
                 title="复制测试地址"
               >
                 复制

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import CryptoJS from 'crypto-js'
+import { electronAPI } from '../utils/electron'
 
 export function CryptoTool() {
   const [input, setInput] = useState('')
@@ -52,8 +53,10 @@ export function CryptoTool() {
     }
   }
 
-  const copyOutput = () => {
-    navigator.clipboard.writeText(output)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copyOutput = async () => {
+    const ok = await electronAPI.copyText(output)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   return (

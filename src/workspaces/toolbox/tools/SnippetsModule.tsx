@@ -93,8 +93,10 @@ export function SnippetsModule() {
     })
   }
 
-  const copySnippet = (content: string) => {
-    navigator.clipboard.writeText(content)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copySnippet = async (content: string) => {
+    const ok = await electronAPI.copyText(content)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   const filteredSnippets = searchQuery

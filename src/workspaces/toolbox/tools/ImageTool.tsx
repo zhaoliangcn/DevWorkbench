@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { electronAPI } from '../utils/electron'
 
 export function ImageTool() {
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -87,8 +88,10 @@ export function ImageTool() {
     document.body.removeChild(a)
   }
 
-  const copyBase64 = () => {
-    navigator.clipboard.writeText(imageBase64)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copyBase64 = async () => {
+    const ok = await electronAPI.copyText(imageBase64)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   return (

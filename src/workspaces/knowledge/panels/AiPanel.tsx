@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useStore } from '../../../store/knowledgeStore'
 import { callAi } from '../utils/ai'
+import { electronAPI } from '../../toolbox/utils/electron'
 import type { AiAction, AiProvider } from '../../../types'
 import {
   Play,
@@ -83,8 +84,13 @@ export default function AiPanel() {
     setTimeout(() => setApplied(false), 2000)
   }
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const handleCopy = async () => {
+    const ok = await electronAPI.copyText(result)
+    if (!ok) {
+      alert('复制失败，请手动复制')
+      return
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

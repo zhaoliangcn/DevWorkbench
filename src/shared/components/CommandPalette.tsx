@@ -191,10 +191,14 @@ function CommandPanel({ onClose }: { onClose: () => void }) {
 
   const goTool = () => {
     if (!toolId) return
-    void navigator.clipboard.writeText(query).then(() => {
-      useToolboxStore.getState().setActiveModule(toolId)
-      useAppStore.getState().setActiveWorkspace('toolbox')
-      onClose()
+    void electronAPI.copyText(query).then((ok) => {
+      if (ok) {
+        useToolboxStore.getState().setActiveModule(toolId)
+        useAppStore.getState().setActiveWorkspace('toolbox')
+        onClose()
+      } else {
+        alert('复制失败，请手动复制')
+      }
     })
   }
 
