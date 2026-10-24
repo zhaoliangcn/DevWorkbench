@@ -37,6 +37,7 @@ import { DockerModule } from './tools/DockerModule'
 import { ProcessMonitorTool } from './tools/ProcessMonitorTool'
 import { EnvManagerTool } from './tools/EnvManagerTool'
 import { VaultTool } from './tools/VaultTool'
+import { BrowserTool } from './tools/BrowserTool'
 
 /** 工具箱模块定义（设计附录 D P0）：由硬编码 moduleMap 收敛为注册表单一事实源 */
 export interface ToolboxModuleDef {
@@ -89,6 +90,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('procmon', ProcessMonitorTool),
   defineToolboxModule('envman', EnvManagerTool),
   defineToolboxModule('vault', VaultTool),
+  defineToolboxModule('browser', BrowserTool),
 ]
 
 /** id → 组件映射，由注册表派生（取用方式与旧 moduleMap 等价，便于静态分析） */

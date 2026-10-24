@@ -194,6 +194,22 @@ export interface ElectronAPIAdapter {
   /** 复制文本到系统剪贴板：Electron 走主进程 clipboard，Web 环境走 navigator.clipboard + execCommand 降级 */
   copyText: (text: string) => Promise<boolean>
 
+  /** Playwright 浏览器自动化（browser:* 命名空间，仅 Electron 可用） */
+  browserLaunch: (url?: string) => Promise<{ success: boolean; sessionId?: string; channel?: string; title?: string; error?: string }>
+  browserNavigate: (sessionId: string, url: string) => Promise<{ success: boolean; title?: string; url?: string; error?: string }>
+  browserClick: (sessionId: string, selector: string) => Promise<{ success: boolean; error?: string }>
+  browserFill: (sessionId: string, selector: string, value: string) => Promise<{ success: boolean; error?: string }>
+  browserText: (sessionId: string) => Promise<{ success: boolean; text?: string; error?: string }>
+  browserScreenshot: (sessionId: string) => Promise<{ success: boolean; pngBase64?: string; error?: string }>
+  browserClose: (sessionId: string) => Promise<{ success: boolean; error?: string }>
+  browserStatus: () => Promise<{
+    activeId: string | null
+    browseWindowOpen: boolean
+    sessions: { id: string; channel: string; url: string; title: string }[]
+  }>
+  browserOpenBrowseWindow: (url: string) => Promise<{ success: boolean; error?: string }>
+  browserCloseBrowseWindow: () => Promise<{ success: boolean; error?: string }>
+
   /** SMB 共享管理（smb:* 命名空间） */
   smbCheck: () => Promise<{ available: boolean; platform: string; isAdmin?: boolean; error?: string }>
   smbList: () => Promise<{ success: boolean; raw: string; platform: string; error?: string }>
@@ -357,6 +373,18 @@ const mockAPI: ElectronAPIAdapter = {
     }
   },
 
+  browserLaunch: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserNavigate: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserClick: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserFill: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserText: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserScreenshot: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserClose: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器自动化' }),
+  browserStatus: () =>
+    Promise.resolve({ activeId: null, browseWindowOpen: false, sessions: [] }),
+  browserOpenBrowseWindow: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器窗口' }),
+  browserCloseBrowseWindow: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器窗口' }),
+
   smbCheck: () => Promise.resolve({ available: false, platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbList: () => Promise.resolve({ success: false, raw: '', platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbCreate: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SMB 管理' }),
@@ -443,6 +471,17 @@ function createElectronAPI(): ElectronAPIAdapter {
       const r = await bridge.file.copyText(text)
       return r.success
     },
+
+    browserLaunch: (url) => bridge.browser.launch(url),
+    browserNavigate: (sessionId, url) => bridge.browser.navigate(sessionId, url),
+    browserClick: (sessionId, selector) => bridge.browser.click(sessionId, selector),
+    browserFill: (sessionId, selector, value) => bridge.browser.fill(sessionId, selector, value),
+    browserText: (sessionId) => bridge.browser.text(sessionId),
+    browserScreenshot: (sessionId) => bridge.browser.screenshot(sessionId),
+    browserClose: (sessionId) => bridge.browser.close(sessionId),
+    browserStatus: () => bridge.browser.status(),
+    browserOpenBrowseWindow: (url) => bridge.browser.openBrowseWindow(url),
+    browserCloseBrowseWindow: () => bridge.browser.closeBrowseWindow(),
 
     smbCheck: () => bridge.smb.check(),
     smbList: () => bridge.smb.list(),

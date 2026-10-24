@@ -3193,3 +3193,87 @@
   color: var(--error-color, #f87171);
   border-color: color-mix(in srgb, var(--error-color, #f87171) 55%, transparent);
 }
+
+/* —— Playwright 浏览器（BrowserTool） —— */
+
+.tb-root .browser-session-badge {
+  font-size: 12px;
+  color: var(--text-secondary, #9ca3af);
+  border: 1px solid var(--border-color, #374151);
+  border-radius: 10px;
+  padding: 2px 10px;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tb-root .browser-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.tb-root .browser-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tb-root .browser-row:only-child,
+.tb-root .browser-actions-grid .browser-row:last-child {
+  margin-bottom: 0;
+}
+
+.tb-root .browser-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color, #374151);
+}
+
+.tb-root .browser-copy-btn {
+  margin-left: 8px;
+  font-size: 12px;
+  padding: 2px 10px;
+}
+
+.tb-root .browser-text-result {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.tb-root .browser-text-result pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.tb-root .browser-shot {
+  max-width: 100%;
+  border: 1px solid var(--border-color, #374151);
+  border-radius: 6px;
+  display: block;
+}
+
+.tb-root .browser-log {
+  max-height: 200px;
+  overflow: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary, #9ca3af);
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.15));
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.tb-root .browser-log-empty {
+  font-size: 12px;
+  opacity: 0.7;
+}

@@ -22,6 +22,7 @@ import { registerSmbIpc } from './ipc/smb.js'
 import { registerEnvfileIpc } from './ipc/envfile.js'
 import { registerSecvaultIpc } from './ipc/secvault.js'
 import { registerExplorerIpc } from './ipc/explorer.js'
+import { registerBrowserIpc, stopBrowserAll } from './ipc/browser.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -87,6 +88,8 @@ app.whenReady().then(async () => {
   registerVaultIpc()
   registerFileIpc()
   registerDirIpc()
+  // 工具箱：Playwright 浏览器（browser:*，headless 自动化会话 + 受管浏览子窗口）
+  registerBrowserIpc()
   // Phase 3: 工具箱（ssh/system/data/app）
   registerToolboxIpc()
   // 工具箱：图标格式转换（iconconvert:*）
@@ -147,6 +150,7 @@ app.on('window-all-closed', () => {
     stopCronScheduler()
     void stopRedisAll()
     stopSqlite()
+    void stopBrowserAll()
     app.quit()
   }
 })
@@ -157,4 +161,5 @@ app.on('before-quit', () => {
   void stopRedisAll()
   stopSqlite()
   void stopAssistant()
+  void stopBrowserAll()
 })

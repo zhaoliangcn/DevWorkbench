@@ -587,6 +587,24 @@ interface ElectronAPI {
     rename: (root: string, rel: string, newName: string) => Promise<{ success: boolean; error?: string }>
     delete: (root: string, rel: string) => Promise<{ success: boolean; error?: string }>
   }
+  browser: {
+    /** Playwright 浏览器自动化：启动/复用 headless 会话（无会话时启动，有 url 则导航） */
+    launch: (url?: string) => Promise<{ success: boolean; sessionId?: string; channel?: string; title?: string; error?: string }>
+    navigate: (sessionId: string, url: string) => Promise<{ success: boolean; title?: string; url?: string; error?: string }>
+    click: (sessionId: string, selector: string) => Promise<{ success: boolean; error?: string }>
+    fill: (sessionId: string, selector: string, value: string) => Promise<{ success: boolean; error?: string }>
+    text: (sessionId: string) => Promise<{ success: boolean; text?: string; error?: string }>
+    screenshot: (sessionId: string) => Promise<{ success: boolean; pngBase64?: string; error?: string }>
+    close: (sessionId: string) => Promise<{ success: boolean; error?: string }>
+    status: () => Promise<{
+      activeId: string | null
+      browseWindowOpen: boolean
+      sessions: { id: string; channel: string; url: string; title: string }[]
+    }>
+    /** 受管浏览子窗口：无 preload 的独立 BrowserWindow 承载日常浏览 */
+    openBrowseWindow: (url: string) => Promise<{ success: boolean; error?: string }>
+    closeBrowseWindow: () => Promise<{ success: boolean; error?: string }>
+  }
 }
 
 /** explorer:list 目录条目（relPath 相对项目根，'/' 分隔） */

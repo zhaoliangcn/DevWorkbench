@@ -7,11 +7,17 @@ import type { App } from 'dev-assistant-ts'
  * ToolRegistry，而 App.create 返回的 App 公开 readonly tools，可在启动后
  * register 注入自定义工具（Agent 运行时按同一注册表实例动态读取 schema）。
  *
- * 安全：仅注册纯计算工具（无 IO / 无命令执行），dangerLevel 一律 low，
- * 自动审批（approvalEnabled:false）模式下不新增风险面。
+ * 安全：
+ * - 纯计算工具（base64/timestamp/json/url/radix/regex）无 IO，dangerLevel low，
+ *   自动审批（approvalEnabled:false）模式下不新增风险面。
+ * - 浏览器工具（toolbox_browser_*）经主进程 playwright 会话访问外部 http(s)，
+ *   属网络 IO，dangerLevel medium；不暴露任意 JS evaluate，仅 locator 语义。
+ *
  * 与渲染端 src/workspaces/toolbox/tools/pure/* 逻辑成对（electron tsconfig
  * rootDir 限制无法跨包共享源码，两侧实现均保持极薄）。
  */
+
+import { browserAssistantApi } from './browser.js'
 
 type AppTools = App['tools']
 type ToolSpec = Parameters<AppTools['register']>[0]
@@ -24,6 +30,10 @@ export const TOOLBOX_TOOL_NAMES = [
   'toolbox_url',
   'toolbox_radix',
   'toolbox_regex',
+  'toolbox_browser_open',
+  'toolbox_browser_text',
+  'toolbox_browser_click',
+  'toolbox_browser_fill',
 ] as const
 export type ToolboxToolName = (typeof TOOLBOX_TOOL_NAMES)[number]
 
@@ -248,6 +258,84 @@ const specs: Record<ToolboxToolName, { spec: ToolSpec; handler: ToolHandler }> =
         }
       }
       return result(true, out.length ? out.join('\n') : '无匹配')
+    },
+  },
+
+  // —— Playwright 浏览器（网络 IO，dangerLevel medium；仅 locator 语义，无任意 JS） ——
+
+  toolbox_browser_open: {
+    spec: {
+      name: 'toolbox_browser_open',
+      description:
+        '打开（或复用）无头浏览器会话并导航到指定网页。无活跃会话时自动启动（本机 Edge/Chrome）；url 缺省时仅启动/返回当前会话。返回页面标题。',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: { type: 'string', description: '目标网址（http/https，无协议自动补 https://）' },
+        },
+      },
+      dangerLevel: 'medium',
+    },
+    handler: async (args) => {
+      const { url } = (args.arguments ?? {}) as { url?: string }
+      const r = await browserAssistantApi.ensureAutoSession(url)
+      if (!r.success) return result(false, r.error ?? '启动失败')
+      return result(true, `会话 ${r.sessionId}（通道 ${r.channel}）${r.title ? `，页面标题：${r.title}` : '已就绪'}`)
+    },
+  },
+
+  toolbox_browser_text: {
+    spec: {
+      name: 'toolbox_browser_text',
+      description: '读取当前浏览器会话页面的可见文本（压缩空白行，超长截断），用于网页内容分析。',
+      parameters: { type: 'object', properties: {} },
+      dangerLevel: 'medium',
+    },
+    handler: async () => {
+      const r = await browserAssistantApi.text()
+      if (!r.success) return result(false, r.error ?? '抓取失败')
+      return result(true, r.content ?? '')
+    },
+  },
+
+  toolbox_browser_click: {
+    spec: {
+      name: 'toolbox_browser_click',
+      description: '在当前浏览器会话页面上点击指定 CSS 选择器匹配的第一个元素（5 秒超时）。',
+      parameters: {
+        type: 'object',
+        properties: {
+          selector: { type: 'string', description: 'CSS 选择器，如 #submit 或 a.link' },
+        },
+        required: ['selector'],
+      },
+      dangerLevel: 'medium',
+    },
+    handler: async (args) => {
+      const { selector } = args.arguments as { selector: string }
+      const r = await browserAssistantApi.click(selector)
+      return r.success ? result(true, '点击成功') : result(false, r.error ?? '点击失败')
+    },
+  },
+
+  toolbox_browser_fill: {
+    spec: {
+      name: 'toolbox_browser_fill',
+      description: '在当前浏览器会话页面上向指定 CSS 选择器匹配的第一个输入框填入文本（覆盖原值）。',
+      parameters: {
+        type: 'object',
+        properties: {
+          selector: { type: 'string', description: 'CSS 选择器，如 #search' },
+          value: { type: 'string', description: '要填入的文本' },
+        },
+        required: ['selector', 'value'],
+      },
+      dangerLevel: 'medium',
+    },
+    handler: async (args) => {
+      const { selector, value } = args.arguments as { selector: string; value: string }
+      const r = await browserAssistantApi.fill(selector, value)
+      return r.success ? result(true, '填值成功') : result(false, r.error ?? '填值失败')
     },
   },
 }

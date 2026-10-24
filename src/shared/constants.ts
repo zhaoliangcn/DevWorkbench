@@ -26,6 +26,7 @@ export const TOOLBOX_MODULES: ToolboxModule[] = [
   { id: 'ssh', name: 'SSH 终端', icon: '💻', category: 'network' },
   { id: 'webhook', name: 'Webhook 接收', icon: '📡', category: 'network' },
   { id: 'smb', name: 'SMB 共享', icon: '📂', category: 'network' },
+  { id: 'browser', name: 'Playwright 浏览器', icon: '🌐', category: 'network' },
   { id: 'textprocess', name: '文本处理', icon: '📄', category: 'file' },
   { id: 'formatconverter', name: '格式互转', icon: '🔄', category: 'file' },
   { id: 'filehash', name: '文件哈希', icon: '#️⃣', category: 'file' },

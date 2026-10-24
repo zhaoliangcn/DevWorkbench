@@ -297,6 +297,20 @@ const api = {
       ipcRenderer.invoke('explorer:rename', root, rel, newName),
     delete: (root: string, rel: string) => ipcRenderer.invoke('explorer:delete', root, rel),
   },
+  browser: {
+    /** Playwright 浏览器自动化（browser:*，headless 会话 + 受管浏览子窗口） */
+    launch: (url?: string) => ipcRenderer.invoke('browser:launch', url),
+    navigate: (sessionId: string, url: string) => ipcRenderer.invoke('browser:navigate', sessionId, url),
+    click: (sessionId: string, selector: string) => ipcRenderer.invoke('browser:click', sessionId, selector),
+    fill: (sessionId: string, selector: string, value: string) =>
+      ipcRenderer.invoke('browser:fill', sessionId, selector, value),
+    text: (sessionId: string) => ipcRenderer.invoke('browser:text', sessionId),
+    screenshot: (sessionId: string) => ipcRenderer.invoke('browser:screenshot', sessionId),
+    close: (sessionId: string) => ipcRenderer.invoke('browser:close', sessionId),
+    status: () => ipcRenderer.invoke('browser:status'),
+    openBrowseWindow: (url: string) => ipcRenderer.invoke('browser:openBrowseWindow', url),
+    closeBrowseWindow: () => ipcRenderer.invoke('browser:closeBrowseWindow'),
+  },
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
