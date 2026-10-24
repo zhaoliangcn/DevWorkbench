@@ -48,8 +48,10 @@ export function MirrorTool() {
     setChecking(false)
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  // 走主进程 clipboard（渲染层 navigator.clipboard 在部分加载环境会被静默拒绝）
+  const copyToClipboard = async (text: string) => {
+    const ok = await electronAPI.copyText(text)
+    if (!ok) alert('复制失败，请手动复制')
   }
 
   const getStatusIcon = (url: string) => {
