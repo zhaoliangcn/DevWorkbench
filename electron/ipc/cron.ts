@@ -10,6 +10,7 @@ import { loadDataFile, saveDataFile } from './data.js'
 import { ringPush } from './webhook.js'
 import { httpRequestHandler } from './http.js'
 import { runAgentTask, runLlmTask } from './assistant.js'
+import { diagnoseScriptFailure } from './cron-diagnostics.js'
 
 export interface CronTargetHttp {
   type: 'http'
@@ -180,7 +181,12 @@ export async function fireTarget(target: CronTarget): Promise<{ ok: boolean; det
       (err, stdout, stderr) => {
         if (err) {
           const reason = stderr?.trim() || err.message
-          resolve({ ok: false, detail: truncate(`exit=${err.code ?? '?'} ${reason}`) })
+          // 诊断提示不参与截断，保证修复指引完整可见
+          const hint = diagnoseScriptFailure(reason)
+          resolve({
+            ok: false,
+            detail: truncate(`exit=${err.code ?? '?'} ${reason}`, 250) + hint,
+          })
           return
         }
         const out = [stdout?.trim(), stderr?.trim()].filter(Boolean).join(' | ')

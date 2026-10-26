@@ -353,6 +353,11 @@ export function CronTool() {
                 />
                 <span className="cron-timeout-hint">脚本超时（秒，1–1800，留空默认 30）</span>
               </div>
+              <div className="cron-add-row">
+                <span className="cron-timeout-hint">
+                  提示：反斜杠 Windows 路径（D:\test\a.py）在 MSYS 版 python/bash（PATH 中 msys64 优先）下会解析失败，请改用 POSIX 形式 /d/test/a.py，或调整 PATH 让原生 python 优先
+                </span>
+              </div>
             </>
           ) : (
             <div className="cron-add-row">
