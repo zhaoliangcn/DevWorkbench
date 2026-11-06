@@ -10,6 +10,7 @@ import { registerToolboxIpc } from './ipc/index.js'
 import { registerIconConvertIpc } from './ipc/icon-convert.js'
 import { registerPdfIpc } from './ipc/pdf.js'
 import { registerBackupIpc } from './ipc/backup.js'
+import { registerArchiveIpc } from './ipc/archive.js'
 import { registerAlarmIpc } from './ipc/alarm.js'
 import { registerHttpIpc } from './ipc/http.js'
 import { registerWebhookIpc, stopWebhookServer } from './ipc/webhook.js'
@@ -98,6 +99,8 @@ app.whenReady().then(async () => {
   registerPdfIpc()
   // 工具箱：文件夹备份（backup:* 命名空间）
   registerBackupIpc()
+  // 工具箱：文件解压（archive:* 命名空间，主进程仅选择/读取/落盘）
+  registerArchiveIpc()
   // 工具箱：闹钟提醒（alarm:* 命名空间，主进程调度 + 系统通知）
   registerAlarmIpc()
   // 附录 F F.2: HTTP 请求下沉主进程（http:request）

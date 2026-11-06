@@ -486,6 +486,29 @@ interface ElectronAPI {
     /** 复制进度实时推送（约 250ms 节流）；返回取消订阅函数 */
     onProgress: (callback: (p: BackupProgress) => void) => () => void
   }
+  archive: {
+    /** 工具箱：文件解压（archive:* 命名空间；路径须来自本会话对话框选择，主进程仅 IO 壳） */
+    pick: () => Promise<
+      | { canceled: true }
+      | { canceled: false; path: string; name: string; size: number }
+    >
+    pickTarget: () => Promise<{ canceled: boolean; path?: string; name?: string }>
+    readBytes: () => Promise<{ base64: string; size: number; name: string }>
+    writeStart: (args: { conflict: 'overwrite' | 'skip' | 'rename' }) => Promise<{ opId: string }>
+    writeBatch: (args: {
+      opId: string
+      items: { path: string; kind: 'file' | 'dir'; base64?: string }[]
+    }) => Promise<{
+      written: number
+      skipped: number
+      renamed: number
+      overwritten: number
+      dirs: number
+      canceled: boolean
+    }>
+    finish: (args: { opId: string; abort?: boolean }) => Promise<ArchiveSummary>
+    cancel: () => Promise<boolean>
+  }
   data: {
     save: (key: string, data: unknown) => Promise<boolean>
     load: (key: string) => Promise<unknown>
@@ -629,6 +652,21 @@ interface BackupProgress {
   copied: number
   /** 当前处理的相对路径 */
   current: string
+}
+
+/** archive:finish 汇总结果（写入统计 + 清理数量；errors 为逐条失败信息，最多 50 条） */
+interface ArchiveSummary {
+  written: number
+  overwritten: number
+  skipped: number
+  renamed: number
+  dirs: number
+  writtenBytes: number
+  errors: string[]
+  errorCount: number
+  /** abort 时回收的文件 + 空目录数量 */
+  cleaned: number
+  canceled: boolean
 }
 
 /** explorer:read 结果：text 可编辑 / binary 二进制（非图片走占位）/ tooLarge 超文本上限 */

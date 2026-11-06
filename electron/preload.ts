@@ -193,6 +193,20 @@ const api = {
       return () => ipcRenderer.removeListener('backup:progress', listener)
     },
   },
+  archive: {
+    /** 工具箱：文件解压（archive:*，主进程 IO 壳；列表/净化/解压引擎在渲染层 pure/archive.ts） */
+    pick: () => ipcRenderer.invoke('archive:pick'),
+    pickTarget: () => ipcRenderer.invoke('archive:pickTarget'),
+    readBytes: () => ipcRenderer.invoke('archive:readBytes'),
+    writeStart: (args: { conflict: 'overwrite' | 'skip' | 'rename' }) =>
+      ipcRenderer.invoke('archive:writeStart', args),
+    writeBatch: (args: {
+      opId: string
+      items: { path: string; kind: 'file' | 'dir'; base64?: string }[]
+    }) => ipcRenderer.invoke('archive:writeBatch', args),
+    finish: (args: { opId: string; abort?: boolean }) => ipcRenderer.invoke('archive:finish', args),
+    cancel: () => ipcRenderer.invoke('archive:cancel'),
+  },
   alarm: {
     /** 工具箱：闹钟提醒（alarm:*，主进程调度 + 系统通知；状态变化经 alarm:changed 广播） */
     getState: () => ipcRenderer.invoke('alarm:getState'),

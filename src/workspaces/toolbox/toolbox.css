@@ -3277,3 +3277,136 @@
   font-size: 12px;
   opacity: 0.7;
 }
+/* 工具箱：文件解压（archive:*） */
+.tb-root .archive-notice {
+  margin: 8px 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  border-left: 3px solid var(--warning-color);
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.tb-root .archive-notice-danger {
+  border-left-color: var(--error-color);
+}
+
+.tb-root .archive-notice-sub {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.tb-root .archive-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tb-root .archive-search {
+  width: 100%;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+.tb-root .archive-entry-list {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+}
+
+.tb-root .archive-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tb-root .archive-entry:last-child {
+  border-bottom: none;
+}
+
+.tb-root .archive-entry-icon {
+  flex: none;
+}
+
+.tb-root .archive-entry-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.tb-root .archive-entry-unsafe {
+  color: var(--error-color);
+  font-style: normal;
+}
+
+.tb-root .archive-entry-meta {
+  flex: none;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-root .archive-entry-badge {
+  flex: none;
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.tb-root .archive-empty {
+  margin: 0;
+  padding: 12px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.tb-root .archive-dir-row {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+}
+
+.tb-root .archive-progress {
+  margin-top: 8px;
+}
+
+.tb-root .archive-progress-track {
+  height: 6px;
+  margin: 8px 0;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--border-color);
+}
+
+.tb-root .archive-progress-bar {
+  height: 100%;
+  background: var(--accent-color);
+  transition: width 0.2s;
+}
+
+.tb-root .archive-error-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--error-color);
+}
