@@ -6,6 +6,7 @@ const CATEGORIES = [
   { key: 'network', title: '网络 & 调试' },
   { key: 'file', title: '文件处理' },
   { key: 'system', title: '系统工具' },
+  { key: 'settings', title: '安全 & 隐私' },
 ] as const
 
 export function Sidebar() {

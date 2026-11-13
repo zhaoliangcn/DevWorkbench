@@ -628,6 +628,49 @@ interface ElectronAPI {
     openBrowseWindow: (url: string) => Promise<{ success: boolean; error?: string }>
     closeBrowseWindow: () => Promise<{ success: boolean; error?: string }>
   }
+  secfile: {
+    /** 文件保险柜状态：exists=已创建，unlocked=会话密钥在内存 */
+    status: () => Promise<SecFileStatus>
+    pickDir: () => Promise<string | null>
+    create: (arg: { dir: string; password: string; autoLockMin: number }) => Promise<{ ok: boolean; error?: string; status?: SecFileStatus }>
+    unlock: (password: string) => Promise<{ ok: boolean; error?: string; status?: SecFileStatus }>
+    lock: () => Promise<{ ok: boolean }>
+    pickFiles: () => Promise<string[]>
+    addPaths: (paths: string[]) => Promise<{ ok: boolean; added: string[]; errors: string[]; status?: SecFileStatus }>
+    exportFile: (id: string) => Promise<{ ok: boolean; error?: string }>
+    remove: (id: string) => Promise<{ ok: boolean; error?: string; status?: SecFileStatus }>
+    preview: (id: string) => Promise<{ ok: boolean; error?: string; name?: string; kind?: 'text' | 'image'; mime?: string; base64?: string }>
+    exportBundle: () => Promise<{ ok: boolean; error?: string }>
+    pickBundleFile: () => Promise<string | null>
+    importBundle: (arg: { bundlePath: string; dir: string; password: string }) => Promise<{ ok: boolean; error?: string; count?: number; status?: SecFileStatus }>
+    cancel: () => Promise<{ ok: boolean }>
+    getPathForFile: (file: File) => string
+    onProgress: (callback: (p: SecFileProgress) => void) => () => void
+  }
+}
+
+/** 文件保险柜列表条目（仅解锁态可得，name 已解密） */
+interface SecFileEntryView {
+  id: string
+  name: string
+  size: number
+  addedAt: string
+}
+
+interface SecFileStatus {
+  exists: boolean
+  unlocked: boolean
+  dir: string | null
+  autoLockMin: number
+  entries: SecFileEntryView[]
+}
+
+/** secfile:progress 推送负载 */
+interface SecFileProgress {
+  op: 'add' | 'export' | 'bundle' | 'autolock'
+  name?: string
+  pct?: number
+  done?: boolean
 }
 
 /** explorer:list 目录条目（relPath 相对项目根，'/' 分隔） */

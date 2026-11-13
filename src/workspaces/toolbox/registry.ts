@@ -39,6 +39,7 @@ import { ProcessMonitorTool } from './tools/ProcessMonitorTool'
 import { EnvManagerTool } from './tools/EnvManagerTool'
 import { VaultTool } from './tools/VaultTool'
 import { BrowserTool } from './tools/BrowserTool'
+import { FileVaultTool } from './tools/FileVaultTool'
 
 /** 工具箱模块定义（设计附录 D P0）：由硬编码 moduleMap 收敛为注册表单一事实源 */
 export interface ToolboxModuleDef {
@@ -93,6 +94,7 @@ export const TOOLBOX_MODULE_REGISTRY: ToolboxModuleDef[] = [
   defineToolboxModule('envman', EnvManagerTool),
   defineToolboxModule('vault', VaultTool),
   defineToolboxModule('browser', BrowserTool),
+  defineToolboxModule('filevault', FileVaultTool),
 ]
 
 /** id → 组件映射，由注册表派生（取用方式与旧 moduleMap 等价，便于静态分析） */

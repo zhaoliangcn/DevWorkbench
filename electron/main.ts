@@ -24,6 +24,7 @@ import { registerEnvfileIpc } from './ipc/envfile.js'
 import { registerSecvaultIpc } from './ipc/secvault.js'
 import { registerExplorerIpc } from './ipc/explorer.js'
 import { registerBrowserIpc, stopBrowserAll } from './ipc/browser.js'
+import { registerSecFileIpc, lockSecFileOnQuit } from './ipc/secfile.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -91,6 +92,8 @@ app.whenReady().then(async () => {
   registerDirIpc()
   // 工具箱：Playwright 浏览器（browser:*，headless 自动化会话 + 受管浏览子窗口）
   registerBrowserIpc()
+  // 工具箱：文件保险柜（secfile:*，主密码 + AES-256-GCM 流式容器）
+  registerSecFileIpc()
   // Phase 3: 工具箱（ssh/system/data/app）
   registerToolboxIpc()
   // 工具箱：图标格式转换（iconconvert:*）
@@ -165,4 +168,5 @@ app.on('before-quit', () => {
   stopSqlite()
   void stopAssistant()
   void stopBrowserAll()
+  lockSecFileOnQuit() // 会话密钥清零
 })

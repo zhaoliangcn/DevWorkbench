@@ -39,11 +39,11 @@ export function isPasswordValid(password: string): boolean {
   return password.length >= MIN_PASSWORD_LEN
 }
 
-function deriveKey(password: string, saltHex: string): Buffer {
+export function deriveKey(password: string, saltHex: string): Buffer {
   return crypto.scryptSync(password, Buffer.from(saltHex, 'hex'), 32, { N: 16384, r: 8, p: 1 })
 }
 
-function encryptRaw(key: Buffer, plaintext: string): VaultBlob {
+export function encryptRaw(key: Buffer, plaintext: string): VaultBlob {
   const iv = crypto.randomBytes(12)
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
   const data = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
@@ -54,7 +54,7 @@ function encryptRaw(key: Buffer, plaintext: string): VaultBlob {
   }
 }
 
-function decryptRaw(key: Buffer, blob: VaultBlob): string {
+export function decryptRaw(key: Buffer, blob: VaultBlob): string {
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(blob.iv, 'hex'))
   decipher.setAuthTag(Buffer.from(blob.tag, 'hex'))
   return Buffer.concat([

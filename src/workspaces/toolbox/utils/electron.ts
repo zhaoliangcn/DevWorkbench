@@ -210,6 +210,24 @@ export interface ElectronAPIAdapter {
   browserOpenBrowseWindow: (url: string) => Promise<{ success: boolean; error?: string }>
   browserCloseBrowseWindow: () => Promise<{ success: boolean; error?: string }>
 
+  /** 文件保险柜（secfile:* 命名空间，主密码 + AES-256-GCM 流式容器，仅 Electron 可用） */
+  secfileStatus: () => Promise<SecFileStatus>
+  secfilePickDir: () => Promise<string | null>
+  secfileCreate: (arg: { dir: string; password: string; autoLockMin: number }) => Promise<{ ok: boolean; error?: string; status?: SecFileStatus }>
+  secfileUnlock: (password: string) => Promise<{ ok: boolean; error?: string; status?: SecFileStatus }>
+  secfileLock: () => Promise<{ ok: boolean }>
+  secfilePickFiles: () => Promise<string[]>
+  secfileAddPaths: (paths: string[]) => Promise<{ ok: boolean; added: string[]; errors: string[]; status?: SecFileStatus }>
+  secfileExportFile: (id: string) => Promise<{ ok: boolean; error?: string }>
+  secfileRemove: (id: string) => Promise<{ ok: boolean; error?: string; status?: SecFileStatus }>
+  secfilePreview: (id: string) => Promise<{ ok: boolean; error?: string; name?: string; kind?: 'text' | 'image'; mime?: string; base64?: string }>
+  secfileExportBundle: () => Promise<{ ok: boolean; error?: string }>
+  secfilePickBundleFile: () => Promise<string | null>
+  secfileImportBundle: (arg: { bundlePath: string; dir: string; password: string }) => Promise<{ ok: boolean; error?: string; count?: number; status?: SecFileStatus }>
+  secfileCancel: () => Promise<{ ok: boolean }>
+  secfileGetPathForFile: (file: File) => string
+  onSecfileProgress: (callback: (p: SecFileProgress) => void) => () => void
+
   /** SMB 共享管理（smb:* 命名空间） */
   smbCheck: () => Promise<{ available: boolean; platform: string; isAdmin?: boolean; error?: string }>
   smbList: () => Promise<{ success: boolean; raw: string; platform: string; error?: string }>
@@ -385,6 +403,23 @@ const mockAPI: ElectronAPIAdapter = {
   browserOpenBrowseWindow: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器窗口' }),
   browserCloseBrowseWindow: () => Promise.resolve({ success: false, error: 'Web 环境不支持浏览器窗口' }),
 
+  secfileStatus: () => Promise.resolve({ exists: false, unlocked: false, dir: null, autoLockMin: 5, entries: [] }),
+  secfilePickDir: () => Promise.resolve(null),
+  secfileCreate: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfileUnlock: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfileLock: () => Promise.resolve({ ok: true }),
+  secfilePickFiles: () => Promise.resolve([]),
+  secfileAddPaths: () => Promise.resolve({ ok: false, added: [], errors: ['Web 环境不支持文件保险柜'] }),
+  secfileExportFile: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfileRemove: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfilePreview: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfileExportBundle: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfilePickBundleFile: () => Promise.resolve(null),
+  secfileImportBundle: () => Promise.resolve({ ok: false, error: 'Web 环境不支持文件保险柜' }),
+  secfileCancel: () => Promise.resolve({ ok: true }),
+  secfileGetPathForFile: () => '',
+  onSecfileProgress: () => () => {},
+
   smbCheck: () => Promise.resolve({ available: false, platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbList: () => Promise.resolve({ success: false, raw: '', platform: 'browser', error: 'Web 环境不支持 SMB 管理' }),
   smbCreate: () => Promise.resolve({ success: false, error: 'Web 环境不支持 SMB 管理' }),
@@ -482,6 +517,23 @@ function createElectronAPI(): ElectronAPIAdapter {
     browserStatus: () => bridge.browser.status(),
     browserOpenBrowseWindow: (url) => bridge.browser.openBrowseWindow(url),
     browserCloseBrowseWindow: () => bridge.browser.closeBrowseWindow(),
+
+    secfileStatus: () => bridge.secfile.status(),
+    secfilePickDir: () => bridge.secfile.pickDir(),
+    secfileCreate: (arg) => bridge.secfile.create(arg),
+    secfileUnlock: (password) => bridge.secfile.unlock(password),
+    secfileLock: () => bridge.secfile.lock(),
+    secfilePickFiles: () => bridge.secfile.pickFiles(),
+    secfileAddPaths: (paths) => bridge.secfile.addPaths(paths),
+    secfileExportFile: (id) => bridge.secfile.exportFile(id),
+    secfileRemove: (id) => bridge.secfile.remove(id),
+    secfilePreview: (id) => bridge.secfile.preview(id),
+    secfileExportBundle: () => bridge.secfile.exportBundle(),
+    secfilePickBundleFile: () => bridge.secfile.pickBundleFile(),
+    secfileImportBundle: (arg) => bridge.secfile.importBundle(arg),
+    secfileCancel: () => bridge.secfile.cancel(),
+    secfileGetPathForFile: (file) => bridge.secfile.getPathForFile(file),
+    onSecfileProgress: (callback) => bridge.secfile.onProgress(callback),
 
     smbCheck: () => bridge.smb.check(),
     smbList: () => bridge.smb.list(),

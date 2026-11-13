@@ -48,6 +48,7 @@ export const TOOLBOX_MODULES: ToolboxModule[] = [
   { id: 'snippets', name: '代码片段', icon: '📝', category: 'devtools' },
   { id: 'notes', name: '随手记', icon: '💡', category: 'devtools' },
   { id: 'vault', name: '凭据保险库', icon: '🛡️', category: 'settings' },
+  { id: 'filevault', name: '文件保险柜', icon: '🔐', category: 'settings' },
 ]
 
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const

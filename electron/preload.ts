@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 // Phase 1：各命名空间的 API 桩。
 // 实际 handler 在 Phase 2（知识库）与 Phase 3（工具箱）中于主进程实现。
@@ -324,6 +324,30 @@ const api = {
     status: () => ipcRenderer.invoke('browser:status'),
     openBrowseWindow: (url: string) => ipcRenderer.invoke('browser:openBrowseWindow', url),
     closeBrowseWindow: () => ipcRenderer.invoke('browser:closeBrowseWindow'),
+  },
+  secfile: {
+    /** 文件保险柜（secfile:*，主密码 + AES-256-GCM 流式容器） */
+    status: () => ipcRenderer.invoke('secfile:status'),
+    pickDir: () => ipcRenderer.invoke('secfile:pickDir'),
+    create: (arg: unknown) => ipcRenderer.invoke('secfile:create', arg),
+    unlock: (password: string) => ipcRenderer.invoke('secfile:unlock', password),
+    lock: () => ipcRenderer.invoke('secfile:lock'),
+    pickFiles: () => ipcRenderer.invoke('secfile:pickFiles'),
+    addPaths: (paths: string[]) => ipcRenderer.invoke('secfile:addPaths', paths),
+    exportFile: (id: string) => ipcRenderer.invoke('secfile:exportFile', id),
+    remove: (id: string) => ipcRenderer.invoke('secfile:remove', id),
+    preview: (id: string) => ipcRenderer.invoke('secfile:preview', id),
+    exportBundle: () => ipcRenderer.invoke('secfile:exportBundle'),
+    pickBundleFile: () => ipcRenderer.invoke('secfile:pickBundleFile'),
+    importBundle: (arg: unknown) => ipcRenderer.invoke('secfile:importBundle', arg),
+    cancel: () => ipcRenderer.invoke('secfile:cancel'),
+    /** 拖拽 File → 绝对路径（webUtils，contextIsolation 下唯一安全方式） */
+    getPathForFile: (file: File) => webUtils.getPathForFile(file),
+    onProgress: (callback: (p: unknown) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, payload: unknown) => callback(payload)
+      ipcRenderer.on('secfile:progress', listener)
+      return () => ipcRenderer.removeListener('secfile:progress', listener)
+    },
   },
 }
 
