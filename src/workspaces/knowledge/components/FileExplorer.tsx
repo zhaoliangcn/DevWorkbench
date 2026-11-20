@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useStore } from '../../../store/knowledgeStore'
 import type { TreeNode, Folder, NoteRef } from '../../../types'
+import { docxToMarkdown } from '../utils/docx'
 import {
   ChevronRight,
   ChevronDown,
@@ -361,6 +362,21 @@ function TreeNodeItem({
   )
 }
 
+const DOCX_MIME =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+function isDocxFile(file: File): boolean {
+  return /\.docx$/i.test(file.name) || file.type === DOCX_MIME
+}
+
+function isSupportedFile(file: File): boolean {
+  return /\.(md|markdown)$/i.test(file.name) || file.type === 'text/markdown' || isDocxFile(file)
+}
+
+function fileTitle(name: string): string {
+  return name.replace(/\.(md|markdown|docx)$/i, '')
+}
+
 export default function FileExplorer() {
   const notes = useStore((s) => s.notes)
   const folders = useStore((s) => s.folders)
@@ -386,27 +402,28 @@ export default function FileExplorer() {
     fileInputRef.current?.click()
   }
 
-  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    const mdFiles = Array.from(files).filter(
-      (f) => f.name.endsWith('.md') || f.type === 'text/markdown'
-    )
+    const supportedFiles = Array.from(files).filter(isSupportedFile)
 
-    if (mdFiles.length === 0) {
-      alert('未检测到 .md 文件，请选择 Markdown 文件')
+    if (supportedFiles.length === 0) {
+      alert('未检测到 .md / .docx 文件，请选择 Markdown 或 Word 文件')
       return
     }
 
-    for (const file of mdFiles) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const content = event.target?.result as string
-        const title = file.name.replace(/\.md$/i, '')
-        importNote(title, content)
+    for (const file of supportedFiles) {
+      try {
+        const content = isDocxFile(file) ? await docxToMarkdown(file) : await file.text()
+        if (!content.trim()) {
+          alert(`未能从 ${file.name} 中提取到内容`)
+          continue
+        }
+        importNote(fileTitle(file.name), content)
+      } catch (err) {
+        alert(`导入 ${file.name} 失败：${err instanceof Error ? err.message : String(err)}`)
       }
-      reader.readAsText(file)
     }
 
     e.target.value = ''
@@ -417,7 +434,7 @@ export default function FileExplorer() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".md,.markdown,text/markdown"
+        accept=".md,.markdown,.docx,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         multiple
         style={{ display: 'none' }}
         onChange={handleFilesSelected}
@@ -436,7 +453,7 @@ export default function FileExplorer() {
           <button
             className="icon-btn"
             onClick={handleImportClick}
-            title="导入 Markdown 文件"
+            title="导入 Markdown / Word 文件"
           >
             <Upload size={16} />
           </button>
